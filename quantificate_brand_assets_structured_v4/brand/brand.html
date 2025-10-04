@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quantificate — Brand Guide</title>
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F172A" media="(prefers-color-scheme: dark)">
+
+<!-- Dynamic favicons (light/dark) -->
+<link rel="icon" type="image/png" href="../favicon/favicon_64.png" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/x-icon" href="../favicon/favicon.ico" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="../favicon/favicon_dark.png" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/x-icon" href="../favicon/favicon_dark.ico" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="../favicon/favicon_64.png" media="(prefers-color-scheme: no-preference)">
+
+<style>
+  :root{
+    --ink:#0F172A; --teal:#14B8A6; --royal:#6D28D9; --gold:#F59E0B; --sky:#0284C7; --gray:#94A3B8; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif; margin:0; color:var(--ink); background:#fff;}
+  header{padding:24px 20px; border-bottom:1px solid #e5e7eb; position:sticky; top:0; background:#fff; z-index:2;}
+  .container{max-width:1100px; margin:0 auto; padding:0 20px}
+  .note{color:#475569; font-size:14px}
+  .grid{display:grid; gap:16px}
+  .grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .card{border:1px solid #e5e7eb; border-radius:12px; padding:16px; background:#fff}
+  .logo-row{display:flex; align-items:center; gap:20px; flex-wrap:wrap}
+  .logo-row img{display:block; height:90px; border-radius:8px}
+  .dark{background:var(--ink); padding:16px; border-radius:12px}
+  footer{margin-top:40px; padding:24px 20px; border-top:1px solid #e5e7eb; color:#64748b; font-size:14px}
+
+  /* --- Text-based brand header (icon-only + text) --- */
+  .brand{display:flex; align-items:center; gap:12px}
+  .brand .brand-mark img{height:44px; display:block; border-radius:8px}
+  .brand-text{display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; line-height:1.1}
+  .brand-name{font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:400; font-size:18px; color:var(--ink); margin:0}
+  .brand-sub{font-family:'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; color:#64748b; letter-spacing:0.06em; margin:2px 0 0 0}
+
+  @media (max-width:900px){
+    .grid.cols-3{grid-template-columns:1fr}
+    .brand .brand-mark img{height:36px}
+    .brand-name{font-size:16px}
+  }
+
+  /* Dark mode */
+  @media (prefers-color-scheme: dark){
+    body{background:#0F172A; color:#F8FAFC;}
+    header{background:#0F172A; border-bottom-color:#1f2937}
+    .note{color:#cbd5e1}
+    .card{background:#111827; border-color:#1f2937}
+    .brand-name{color:#F8FAFC}
+    .brand-sub{color:#cbd5e1}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <div class="brand">
+      <!-- Icon-only logo that adapts to light/dark -->
+      <picture class="brand-mark">
+        <source srcset="../avatars/avatar_dark_256.png" media="(prefers-color-scheme: dark)">
+        <source srcset="../avatars/avatar_light_256.png" media="(prefers-color-scheme: light)">
+        <img src="../avatars/avatar_light_256.png" alt="Quantificate mark">
+      </picture>
+      <!-- Text-based treatment -->
+      <div class="brand-text">
+        <div class="brand-name">Quantificate</div>
+        <div class="brand-sub">analysis • tools • insight</div>
+      </div>
+    </div>
+    <div class="note">Logos, colors, type, usage, and downloadable assets. This page adapts to your browser’s light/dark theme (including the favicon).</div>
+  </div>
+</header>
+
+<main class="container">
+
+  <section id="logos">
+    <h2>Logos</h2>
+    <div class="card">
+      <div class="logo-row">
+        <div>
+          <div class="note">Primary (light)</div>
+          <img src="../logo/logo_light_1024.png" alt="Logo — light">
+        </div>
+        <div>
+          <div class="note">Dark background</div>
+          <div class="dark"><img src="../logo/logo_dark_1024.png" alt="Logo — dark"></div>
+        </div>
+        <div>
+          <div class="note">Light on transparent</div>
+          <div class="dark"><img src="../logo/logo_light_on_transparent_1024.png" alt="Logo — light on transparent"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="avatars">
+    <h2>Avatars</h2>
+    <div class="grid cols-3">
+      <div class="card"><div class="note">Light</div><img src="../avatars/avatar_light_256.png" alt="Avatar light"></div>
+      <div class="card"><div class="note">Dark</div><div class="dark"><img src="../avatars/avatar_dark_256.png" alt="Avatar dark"></div></div>
+      <div class="card"><div class="note">Transparent</div><div class="dark"><img src="../avatars/avatar_transparent_256.png" alt="Avatar transparent"></div></div>
+    </div>
+  </section>
+
+  <section id="downloads">
+    <h2>Downloads</h2>
+    <div class="card">
+      <ul>
+        <li>Brand Kit (PDF): <code>../brand-kit/Quantificate_Brand_Kit_v4.pdf</code></li>
+        <li>Favicons (light/dark): <code>../favicon/favicon.ico</code>, <code>../favicon/favicon_64.png</code>, <code>../favicon/favicon_dark.ico</code>, <code>../favicon/favicon_dark.png</code></li>
+        <li>Logos: see <code>../logo/</code> folder (light, dark, transparent variants in PNG+SVG)</li>
+        <li>Avatars: see <code>../avatars/</code> folder (light, dark, transparent in PNG+SVG)</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+<footer class="container">© 2025 Quantificate. All rights reserved.</footer>
+</body>
+</html>
