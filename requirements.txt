@@ -1,6 +1,6 @@
-streamlit
-yfinance
-pandas
-numpy
-altair
-scipy
+streamlit>=1.35
+pandas>=2.1
+numpy>=1.25
+yfinance>=0.2.40
+altair>=5.0
+scipy>=1.10    # enables the optimizer; app still runs if missing
