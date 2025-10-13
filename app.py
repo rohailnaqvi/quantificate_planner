@@ -1,7 +1,6 @@
 # app.py — Quantificate Personal Investment Planner — Guide, Explore, Plan and Execute
-# Header: compact two-column hero (logo + centered title), auto light/dark logos & light favicon
 # Explore: full-width, Step-1-like visual layout for series checkboxes (fixed master/child behavior)
-# Plan: outputs-first layout with Action Bar at top; inputs in collapsed expanders; working master/child; bold full-width buttons; Optimize teal
+# Plan: outputs-first layout with Action Bar at top; inputs in collapsed expanders; bold full-width buttons; Optimize teal
 
 __version__ = "Quantificate PIP v1 (2025-10-03)"
 
@@ -90,40 +89,55 @@ st.markdown(
     f"""
 <style>
   :root {{
-    --ink:{BRAND["ink"]}; --teal:{BRAND["teal"]}; --royal:{BRAND["royal"]};
-    --gold:{BRAND["gold"]}; --sky:{BRAND["sky"]}; --gray:{BRAND["gray"]};
+    --ink:{BRAND["ink"]};
+    --teal:{BRAND["teal"]};
+    --royal:{BRAND["royal"]};
+    --gold:{BRAND["gold"]};
+    --sky:{BRAND["sky"]};
+    --gray:{BRAND["gray"]};
     --white:{BRAND["white"]};
+    /* Streamlit primary accent (light & dark) */
+    --primary-color:{BRAND["teal"]};
   }}
+
   .block-container {{padding-top:.6rem; padding-bottom:2.2rem; max-width:1300px;}}
   h1,h2,h3 {{letter-spacing:.2px; color:var(--ink);}}
 
-  /* Global button style tweaks */
-  .stButton>button {{
-    width: 100%;
-    font-weight: 700; /* bold */
-    border-radius:10px; 
-    border:1px solid color-mix(in srgb, var(--teal) 40%, white);
-    color:var(--ink); 
-    background:color-mix(in srgb, var(--teal) 8%, white);
-  }}
-  .stButton>button:hover {{ 
-    border-color:var(--teal); 
-    background:color-mix(in srgb, var(--teal) 16%, white); 
+/* ===== Buttons (global) ===== */
+  /* All Streamlit buttons get bold text and stretch within their container */
+  .stButton > button, .stForm button[kind], .stForm button[data-testid="baseButton"], .stForm [role="button"] {{
+    width: 100% !important;
+    font-weight: 700 !important; /* bold */
+    border-radius:10px;
   }}
 
-  /* Make PRIMARY buttons teal with white text (we'll set Optimize as primary) */
-  button[data-testid="baseButton-primary"] {{
-    background: {BRAND["teal"]} !important;
-    color: #ffffff !important;
-    border-color: {BRAND["teal"]} !important;
+  /* Default (non-primary) button aesthetic */
+  .stButton > button:not([data-testid="baseButton-primary"]):not([kind="primary"]) {{
+    border:1px solid color-mix(in srgb, var(--teal) 40%, white);
+    color:var(--ink);
+    background:color-mix(in srgb, var(--teal) 8%, white);
   }}
-  button[data-testid="baseButton-primary"]:hover {{
+  .stButton > button:not([data-testid="baseButton-primary"]):not([kind="primary"]):hover {{
+    border-color:var(--teal);
+    background:color-mix(in srgb, var(--teal) 16%, white);
+  }}
+
+  /* Primary buttons = teal with white text (Optimize) */
+  button[data-testid="baseButton-primary"],
+  .stButton > button[kind="primary"]{{
+    background: var(--primary-color) !important;
+    color: #ffffff !important;
+    border:1px solid var(--primary-color) !important;
+  }}
+  button[data-testid="baseButton-primary"]:hover,
+  .stButton > button[kind="primary"]:hover {{
     filter: brightness(0.95);
   }}
 
+  /* Dataframe headers */
   .stDataFrame thead tr th {{ background:color-mix(in srgb, var(--teal) 8%, white) !important; }}
 
-  /* Compact hero (logo left @60%, title centered) */
+/* ===== Hero ===== */
   .brand-hero {{
     display:grid; grid-template-columns:300px 1fr; gap:24px; align-items:center;
     margin:.4rem 0 1.0rem 0;
@@ -238,8 +252,8 @@ def fetch_rf_history(code: str)->pd.DataFrame:
 def get_rf_for_horizon(h:int)->float:
     try:
         tnx, tyx = fetch_rf_history("^TNX"), fetch_rf_history("^TYX")
-        if h<=10 and tnx is not None and not tnx.empty: rf = float(tnx["Close"].iloc[-1])/1000.0
-        elif tyx is not None and not tyx.empty:       rf = float(tyx["Close"].iloc[-1])/1000.0
+        if h<=10 and not tnx.empty: rf = float(tnx["Close"].iloc[-1])/1000.0
+        elif not tyx.empty:        rf = float(tyx["Close"].iloc[-1])/1000.0
         else: rf = 0.0
         return float(rf) if np.isfinite(rf) else 0.0
     except: return 0.0
@@ -384,7 +398,7 @@ with tabs[1]:
         with c_ctrl[2]:
             freq = st.selectbox("Display frequency", ["Weekly","Monthly"], index=1)
         with c_ctrl[4]:
-            go_hist = st.form_submit_button("Update")
+            go_hist = st.form_submit_button("Update", use_container_width=True)
 
     # FULL-WIDTH series checklist
     st.markdown("**Series to show (chart only):**")
@@ -456,20 +470,6 @@ with tabs[1]:
 
     # === Historical Analysis — Tables (Sections 1–3) ===
     st.subheader("Historical Analysis — Tables")
-
-    # Section 1 — Index/Asset Historical Returns Analysis
-    with st.expander("Section 1 — Index/Asset Historical Returns Analysis", expanded=False):
-        if pd.notna(REF_LATEST):
-            st.markdown(
-                f"**Reference latest (common):** `{REF_LATEST.date().isoformat()}`  |  "
-                f"**Dynamic targets:** " + " • ".join([f"{ANCHOR_LABELS[y]} → `{TARGET_DATES[y].isoformat()}`"
-                                                      for y in ANCHORS_YEARS if TARGET_DATES[y] is not None]) +
-                f"  |  **Fixed target:** `2000-01-01`"
-            )
-        st.subheader("Table 1: Prices")
-        # Helpers for tables (defined below)
-        # (We intentionally render after functions exist.)
-        pass
 
     # ------------------- Tables (builders) -------------------
     def build_uniform_price_table() -> pd.DataFrame:
@@ -715,7 +715,7 @@ with tabs[1]:
         tabA = pd.DataFrame(rows_A)[["Index"] + labels]
         return tabA
 
-    # ---- Render the Section 1/2/3 tables (now that builders exist) ----
+    # ---- Render the Section 1/2/3 tables (single, real versions) ----
     with st.expander("Section 1 — Index/Asset Historical Returns Analysis", expanded=False):
         if pd.notna(REF_LATEST):
             st.markdown(
@@ -772,11 +772,12 @@ with tabs[2]:
     enabled_list = [k for k, v in st.session_state["enabled_assets"].items() if v]
 
     # ---------- ACTION BAR (TOP) ----------
-    a1, a2 = st.columns([0.5, 0.5])
+    a1, a2 = st.columns([0.5, 0.5], gap="large")
     with a1:
-        do_calc = st.button("Calculate", key="calc_btn")
+        do_calc = st.button("Calculate", key="calc_btn", use_container_width=True)
     with a2:
-        do_opt  = st.button("Optimize for Sharpe", key="opt_btn", type="primary")
+        # type="primary" picks up the teal & white via CSS; full width via param and CSS
+        do_opt  = st.button("Optimize for Sharpe", key="opt_btn", type="primary", use_container_width=True)
 
     # ---------- Optimize ----------
     @st.cache_data(ttl=24*60*60, show_spinner=False)
@@ -1181,7 +1182,9 @@ with tabs[2]:
                                 key=f"cmax_{n}", disabled=(not active_asset or not st.session_state["max_on"]),
                             )
                             st.session_state["buf_max"][n] = float(vmax)
-            applied = st.form_submit_button("Apply constraints")
+
+            # Full-width submit button
+            applied = st.form_submit_button("Apply constraints", use_container_width=True)
 
         if applied:
             st.session_state["group_min"] = dict(gmin_temp)
