@@ -1,6 +1,7 @@
 # app.py — Quantificate Personal Investment Planner — Guide, Explore, Plan and Execute
 # Explore: full-width, Step-1-like visual layout for series checkboxes (fixed master/child behavior)
 # Plan: outputs-first layout with Action Bar at top; inputs in collapsed expanders; bold full-width buttons; Optimize teal
+# Plan: Projection Table & Guide tables now brand-styled (teal header, zebra rows); Portfolio row highlighted; captions added
 
 __version__ = "Quantificate PIP v1 (2025-10-03)"
 
@@ -96,7 +97,6 @@ st.markdown(
     --sky:{BRAND["sky"]};
     --gray:{BRAND["gray"]};
     --white:{BRAND["white"]};
-    /* Streamlit primary accent (light & dark) */
     --primary-color:{BRAND["teal"]};
   }}
 
@@ -104,14 +104,12 @@ st.markdown(
   h1,h2,h3 {{letter-spacing:.2px; color:var(--ink);}}
 
 /* ===== Buttons (global) ===== */
-  /* All Streamlit buttons get bold text and stretch within their container */
   .stButton > button, .stForm button[kind], .stForm button[data-testid="baseButton"], .stForm [role="button"] {{
     width: 100% !important;
     font-weight: 700 !important; /* bold */
     border-radius:10px;
   }}
 
-  /* Default (non-primary) button aesthetic */
   .stButton > button:not([data-testid="baseButton-primary"]):not([kind="primary"]) {{
     border:1px solid color-mix(in srgb, var(--teal) 40%, white);
     color:var(--ink);
@@ -122,7 +120,6 @@ st.markdown(
     background:color-mix(in srgb, var(--teal) 16%, white);
   }}
 
-  /* Primary buttons = teal with white text (Optimize) */
   button[data-testid="baseButton-primary"],
   .stButton > button[kind="primary"]{{
     background: var(--primary-color) !important;
@@ -134,7 +131,6 @@ st.markdown(
     filter: brightness(0.95);
   }}
 
-  /* Dataframe headers */
   .stDataFrame thead tr th {{ background:color-mix(in srgb, var(--teal) 8%, white) !important; }}
 
 /* ===== Hero ===== */
@@ -157,6 +153,9 @@ st.markdown(
   .ok  {{background: color-mix(in srgb, var(--teal) 12%, white); color:#065f46; border:1px solid color-mix(in srgb, var(--teal) 48%, white)}}
   .warn{{background: color-mix(in srgb, var(--gold) 12%, white); color:#7c2d12; border:1px solid color-mix(in srgb, var(--gold) 48%, white)}}
   .err {{background:#fee2e2; color:#7f1d1d; border:1px solid #fecaca}}
+
+  /* Generic wrapper to allow horizontal scroll for custom HTML tables */
+  .q-table-wrap {{ overflow-x:auto; }}
 </style>
 """,
     unsafe_allow_html=True,
@@ -776,10 +775,9 @@ with tabs[2]:
     with a1:
         do_calc = st.button("Calculate", key="calc_btn", use_container_width=True)
     with a2:
-        # type="primary" picks up the teal & white via CSS; full width via param and CSS
         do_opt  = st.button("Optimize for Sharpe", key="opt_btn", type="primary", use_container_width=True)
 
-    # ---------- Optimize ----------
+    # ---------- Optimize helpers ----------
     @st.cache_data(ttl=24*60*60, show_spinner=False)
     def get_cagr_table() -> pd.DataFrame:
         return build_cagr_table_numeric()
@@ -866,6 +864,7 @@ with tabs[2]:
     # ---------- Projection state init ----------
     if "proj_lines" not in st.session_state: st.session_state["proj_lines"] = pd.DataFrame()
     if "proj_table_display" not in st.session_state: st.session_state["proj_table_display"] = pd.DataFrame()
+    if "proj_table_raw" not in st.session_state: st.session_state["proj_table_raw"] = pd.DataFrame()
     if "proj_flags" not in st.session_state: st.session_state["proj_flags"] = {}
     if "corr_view" not in st.session_state: st.session_state["corr_view"] = pd.DataFrame()
     if "corr_note" not in st.session_state: st.session_state["corr_note"] = ""
@@ -895,6 +894,8 @@ with tabs[2]:
             rows.append({"Index": n, "Allocation %": w*100.0, "Allocation $": dollars, "RF": rf, "CAGR": r, "AnnVol": np.nan})
 
         table = pd.DataFrame(rows)
+        st.session_state["proj_table_raw"] = table.copy()
+
         if "AnnVol" not in table.columns: table["AnnVol"] = np.nan
         if not ann_vol.empty:
             table = table.merge(ann_vol.rename(columns={"AnnVol": "AnnVol_new"}), on="Index", how="left")
@@ -938,6 +939,7 @@ with tabs[2]:
         }])
         display = pd.concat([table, totals], ignore_index=True)
 
+        # Save formatted display for chart/legend
         show_tbl = display.copy()
         show_tbl["Allocation %"] = show_tbl["Allocation %"].map(lambda v: f"{v:.2f}%")
         show_tbl["Allocation $"] = show_tbl["Allocation $"].map(lambda v: f"{int(round(v)):,}")
@@ -1031,13 +1033,61 @@ with tabs[2]:
                     chart = lines
                 st.altair_chart(chart, use_container_width=True)
 
+    # ---------- BRAND-STYLED PROJECTION TABLE ----------
     st.subheader("Projection Table")
+
+    def _style_projection_table(df_disp: pd.DataFrame) -> str:
+        """Return HTML for a styled projection table. Highlights 'Portfolio' row."""
+        if df_disp is None or df_disp.empty:
+            return ""
+        df = df_disp.copy()
+        df = df.reset_index(drop=True)
+
+        # Helper: highlight portfolio row
+        def highlight_portfolio(row):
+            bg = "background-color: color-mix(in srgb, var(--teal) 12%, white); color: #0f172a; font-weight: 700;"
+            empty = ""
+            return [bg if (str(row.get("Index","")) == "Portfolio") else empty for _ in row]
+
+        # Build Styler
+        styler = (
+            df.style
+              .hide(axis="index")
+              .set_table_styles([
+                  {"selector":"thead th",
+                   "props":[("background","color-mix(in srgb, var(--teal) 18%, white)"),
+                            ("color","#0f172a"), ("font-weight","700"), ("border-bottom","1px solid #d1d5db")]},
+                  {"selector":"tbody td",
+                   "props":[("border-bottom","1px solid color-mix(in srgb, var(--gray) 40%, white)"),
+                            ("padding","8px 10px"), ("vertical-align","middle")]},
+                  {"selector":"tbody tr:nth-child(even)",
+                   "props":[("background-color","color-mix(in srgb, var(--gray) 15%, white)")]},
+                  {"selector":"tbody tr:hover td",
+                   "props":[("background-color","color-mix(in srgb, var(--sky) 10%, white)")]},
+                  {"selector":"table",
+                   "props":[("border-collapse","collapse"), ("font-size","0.95rem")]}
+              ])
+              .apply(highlight_portfolio, axis=1)
+        )
+        # Right-align numeric columns (all except 'Index')
+        num_cols = [c for c in df.columns if c != "Index"]
+        styler = styler.set_properties(subset=num_cols, **{"text-align":"right"})
+        return styler.to_html(escape=False)
+
     show_tbl = st.session_state.get("proj_table_display", pd.DataFrame())
     if show_tbl.empty:
         st.info("Press **Calculate** (or **Optimize**) to compute the table.")
     else:
-        st.dataframe(show_tbl, use_container_width=True, hide_index=True)
-        st.caption("RF uses latest ^TNX (≤10y horizon) or ^TYX (>10y). Sharpe = (CAGR − RF) / AnnVol.")
+        html = _style_projection_table(show_tbl)
+        st.markdown(f"<div class='q-table-wrap'>{html}</div>", unsafe_allow_html=True)
+        st.caption(
+            "Assumptions used in this projection:  "
+            "• **CAGR source** — If horizon < 5y → uses **10-year** historical CAGR; 5–10y → **10-year**; "
+            ">10–15y → **15-year**; >15–20y → **20-year**; >20y → **Max window**.  "
+            "• **Annualized volatility** — Daily return std dev over the **past T years** (your selected horizon), × √252, using overlapping dates across enabled assets.  "
+            "• **Risk-free (RF)** — Latest **^TNX** (≤10y horizons) or **^TYX** (>10y horizons).  "
+            "• **Portfolio math** — Future value blends asset CAGRs by weights; **Sharpe** = (CAGR − RF) / AnnVol."
+        )
 
     st.subheader("Correlation matrix (daily returns)")
     cdf = st.session_state.get("corr_view", pd.DataFrame())
@@ -1183,7 +1233,6 @@ with tabs[2]:
                             )
                             st.session_state["buf_max"][n] = float(vmax)
 
-            # Full-width submit button
             applied = st.form_submit_button("Apply constraints", use_container_width=True)
 
         if applied:
@@ -1200,19 +1249,91 @@ with tabs[2]:
 with tabs[3]:
     st.subheader("What are these indexes & assets? How do I invest in them?")
     st.caption("Plain-English descriptions and example ETFs you can research further.")
+
+    # Build guide rows with richer blurbs + official links
+    def link(text, url): return f"<a href='{url}' target='_blank'>{text}</a>"
+
+    ETF_URL = {
+        "VOO":"https://investor.vanguard.com/investment-products/etfs/profile/voo",
+        "IVV":"https://www.ishares.com/us/products/239726/ivv-ishares-core-sp-500-etf",
+        "SPY":"https://www.ssga.com/us/en/individual/etfs/funds/spdr-sp-500-etf-trust-spy",
+        "DIA":"https://www.ssga.com/us/en/individual/etfs/funds/spdr-dow-jones-industrial-average-etf-trust-dia",
+        "QQQ":"https://www.invesco.com/us/financial-products/etfs/product-detail?productId=QQQ",
+        "ONEQ":"https://www.fidelity.com/etfs/fidelity-oneq/overview",
+        "IWB":"https://www.ishares.com/us/products/239707/iwb-ishares-russell-1000-etf",
+        "IWM":"https://www.ishares.com/us/products/239710/iwm-ishares-russell-2000-etf",
+        "IWV":"https://www.ishares.com/us/products/239707/#/holdings?tab=overview&fundTicker=IWV",
+        "VTI":"https://investor.vanguard.com/investment-products/etfs/profile/vti",
+        "ITOT":"https://www.ishares.com/us/products/239724/itot-ishares-core-sp-total-us-stock-market-etf",
+        "SCHB":"https://www.schwabassetmanagement.com/products/schb",
+        "GLD":"https://www.spdrgoldshares.com/usa/",
+        "IAU":"https://www.ishares.com/us/products/239561/ishares-gold-trust-fund",
+        "SLV":"https://www.ishares.com/us/products/239855/ishares-silver-trust-fund",
+        "SIVR":"https://www.abrdn.com/en-us/us/investor/funds/abrdn-physical-silver-shares-etf-sivr"
+    }
+
     guide_rows = [
-        ("S&P 500", "Tracks ~500 of the largest U.S. companies — a broad ‘big-company’ snapshot.", "SPY, IVV, VOO"),
-        ("Dow Jones Industrial Average", "30 major U.S. companies, price-weighted.", "DIA"),
-        ("NASDAQ Composite", "Thousands of NASDAQ stocks; tech-tilted.", "ONEQ (Composite proxy); NASDAQ-100: QQQ"),
-        ("Russell 1000", "Large & mid-cap U.S. stocks.", "IWB"),
-        ("Russell 2000", "Small-cap U.S. stocks.", "IWM"),
-        ("Russell 3000", "Almost the whole U.S. market.", "IWV; total-market: VTI, SCHB, ITOT"),
-        ("NYSE Composite", "All common stocks on the NYSE.", "No pure-play ETF; total-market funds like VTI can proxy"),
-        ("Wilshire 5000", "‘Total U.S. market’ concept.", "No direct ETF; common proxies: VTI, ITOT"),
-        ("Gold (via GLD)", "Gold bullion exposure via ETF.", "GLD (alt: IAU)"),
-        ("Silver (via SLV)", "Silver bullion exposure via ETF.", "SLV (alt: SIVR)"),
-        ("Bitcoin", "Original cryptocurrency; high volatility.", "Spot BTC ETFs (e.g., IBIT, FBTC)*"),
-        ("Ethereum", "Smart-contract platform, #2 crypto.", "Spot ETH ETFs (e.g., ETHA, EETH)*"),
+        ("S&P 500",
+         "Tracks ~500 of the largest U.S. companies by market cap. Common ‘core’ U.S. large-cap exposure used to represent big, diversified businesses.",
+         f"{link('VOO', ETF_URL['VOO'])}, {link('IVV', ETF_URL['IVV'])}, {link('SPY', ETF_URL['SPY'])}"),
+        ("Dow Jones Industrial Average",
+         "30 major U.S. blue-chip companies; price-weighted (stocks with higher prices have more influence). An iconic but narrower slice than the S&P 500.",
+         f"{link('DIA', ETF_URL['DIA'])}"),
+        ("NASDAQ Composite",
+         "Broad index of thousands of NASDAQ-listed stocks, with a technology tilt. Skews toward growth-oriented companies.",
+         f"{link('ONEQ', ETF_URL['ONEQ'])} (Composite proxy); NASDAQ-100: {link('QQQ', ETF_URL['QQQ'])}"),
+        ("Russell 1000",
+         "Large & mid-cap segment of the U.S. market (top ~1000 stocks by market cap). Represents most of total market value.",
+         f"{link('IWB', ETF_URL['IWB'])}"),
+        ("Russell 2000",
+         "Small-cap U.S. stocks (ranked below the Russell 1000). Higher volatility and growth potential; more sensitive to the domestic economy.",
+         f"{link('IWM', ETF_URL['IWM'])}"),
+        ("Russell 3000",
+         "Nearly the entire U.S. stock market (~3000 stocks). Often proxied by total-market funds.",
+         f"{link('IWV', ETF_URL['IWV'])}; total-market: {link('VTI', ETF_URL['VTI'])}, {link('SCHB', ETF_URL['SCHB'])}, {link('ITOT', ETF_URL['ITOT'])}"),
+        ("NYSE Composite",
+         "All common stocks listed on the NYSE. Broad coverage across sectors and market caps, though not commonly tracked by a single ETF.",
+         "No pure-play ETF; total-market funds like "
+         f"{link('VTI', ETF_URL['VTI'])} or {link('ITOT', ETF_URL['ITOT'])} can proxy"),
+        ("Wilshire 5000",
+         "Classic ‘total U.S. market’ concept (all U.S. equities). Often approximated via total-market ETFs.",
+         "No direct ETF; common proxies: "
+         f"{link('VTI', ETF_URL['VTI'])}, {link('ITOT', ETF_URL['ITOT'])}"),
+        ("Gold (via GLD/IAU)",
+         "Exposure to the price of gold bullion. Often used for diversification and as a potential inflation hedge.",
+         f"{link('GLD', ETF_URL['GLD'])} (alt: {link('IAU', ETF_URL['IAU'])})"),
+        ("Silver (via SLV/SIVR)",
+         "Exposure to silver bullion prices. Tends to be more volatile than gold and more sensitive to industrial demand.",
+         f"{link('SLV', ETF_URL['SLV'])} (alt: {link('SIVR', ETF_URL['SIVR'])})"),
+        ("Bitcoin",
+         "Original cryptocurrency; highly volatile and speculative. Behaves differently from traditional assets.",
+         "Spot BTC ETFs (e.g., IBIT, FBTC) — availability varies by country/broker."),
+        ("Ethereum",
+         "Smart-contract platform (2nd-largest crypto). Supports decentralized apps; also highly volatile and speculative.",
+         "Spot ETH ETFs (e.g., ETHA, EETH) — availability varies by country/broker."),
     ]
-    st.table(pd.DataFrame(guide_rows, columns=["Asset/Index", "What it tracks (plain English)", "Popular ETFs (examples)"]))
+    guide_df = pd.DataFrame(guide_rows, columns=["Asset/Index", "What it tracks & what it is", "Where to invest (examples)"])
+
+    # Brand-styled Guide table (HTML via Styler so we can keep links)
+    def _style_guide_table(df_disp: pd.DataFrame) -> str:
+        df = df_disp.copy()
+        def base_styles():
+            return [
+                {"selector":"thead th",
+                 "props":[("background","color-mix(in srgb, var(--teal) 18%, white)"),
+                          ("color","#0f172a"), ("font-weight","700"), ("border-bottom","1px solid #d1d5db")]},
+                {"selector":"tbody td",
+                 "props":[("border-bottom","1px solid color-mix(in srgb, var(--gray) 40%, white)"),
+                          ("padding","8px 10px"), ("vertical-align","top")]},
+                {"selector":"tbody tr:nth-child(even)",
+                 "props":[("background-color","color-mix(in srgb, var(--gray) 15%, white)")]},
+                {"selector":"tbody tr:hover td",
+                 "props":[("background-color","color-mix(in srgb, var(--sky) 10%, white)")]},
+                {"selector":"table",
+                 "props":[("border-collapse","collapse"), ("font-size","0.95rem")]}
+            ]
+        styler = df.style.hide(axis="index").set_table_styles(base_styles())
+        return styler.to_html(escape=False)
+
+    st.markdown(f"<div class='q-table-wrap'>{_style_guide_table(guide_df)}</div>", unsafe_allow_html=True)
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
