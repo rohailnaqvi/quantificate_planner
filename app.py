@@ -1,6 +1,6 @@
 # app.py — Quantificate Personal Investment Planner — Guide, Explore, Plan and Execute
 # Header: compact two-column hero (logo + centered title), auto light/dark logos & light favicon
-# Explore: full-width, Step-1-like visual layout for series checkboxes
+# Explore: full-width, Step-1-like visual layout for series checkboxes (fixed master/child behavior)
 # Plan: buffered group constraints with safe, deferred apply (no widget-state errors)
 
 __version__ = "Quantificate PIP v1 (2025-10-03)"
@@ -248,71 +248,99 @@ def window_start_for_label(label:str)->Optional[pd.Timestamp]:
     return None
 
 # ======================================================================
-# ====== Master/child checkbox helpers (top-level, used in tabs) =======
+# ====== Master/child checkbox helpers (fixed to update widget keys) ===
 # ======================================================================
 
-def toggle_hist_group(master_key: str, names: list[str]):
-    """Explore tab: master 'Show all' toggles child checkboxes."""
+def toggle_hist_group(master_key: str, names: list[str], key_prefix: str):
+    """Explore: master 'Show all' toggles each child widget key AND the hist_show dict."""
     flag = bool(st.session_state.get(master_key, False))
+    # Ensure dict exists
+    if "hist_show" not in st.session_state:
+        st.session_state["hist_show"] = {}
     for n in names:
-        st.session_state["hist_show"][n] = flag
+        child_key = f"{key_prefix}_{n}"
+        st.session_state[child_key] = flag                  # <- actual widget state
+        st.session_state["hist_show"][n] = flag             # <- mirror to your dict
 
 def render_explore_group(grp: str, names: list[str], key_prefix: str):
-    """Explore tab group renderer with working master checkbox."""
+    """Explore group renderer with working master checkbox."""
+    # Ensure dict exists
+    if "hist_show" not in st.session_state:
+        st.session_state["hist_show"] = {}
+
+    # Initialize child widget keys on first run
+    for n in names:
+        child_key = f"{key_prefix}_{n}"
+        if child_key not in st.session_state:
+            st.session_state[child_key] = bool(st.session_state["hist_show"].get(n, True))
+        # Keep dict in sync with widget key
+        st.session_state["hist_show"][n] = bool(st.session_state.get(child_key, True))
+
     hL, hR = st.columns([0.7, 0.3])
     with hL:
         st.markdown(f"*{grp}*")
     with hR:
         master_key = f"{key_prefix}_master_{grp}"
-        # On first load, reflect current children
+        # Compute initial master state from current children (widget keys)
+        current_all = all(bool(st.session_state.get(f"{key_prefix}_{n}", True)) for n in names)
         if master_key not in st.session_state:
-            st.session_state[master_key] = all(st.session_state["hist_show"].get(n, True) for n in names)
-        # Master drives children via callback
-        st.checkbox("Show all", key=master_key, on_change=toggle_hist_group, args=(master_key, names))
-        # Optional visual cue (no state mutation)
-        status_all_on = all(st.session_state["hist_show"].get(n, True) for n in names)
-        st.caption("All selected" if status_all_on else "Some hidden")
+            st.session_state[master_key] = current_all
+        st.checkbox("Show all", key=master_key, on_change=toggle_hist_group, args=(master_key, names, key_prefix))
+        st.caption("All selected" if current_all else "Some hidden")
 
-    # Child checkboxes (2-column grid)
+    # Child checkboxes (2-column grid) driven by their widget keys
     cols = st.columns(2)
     for i, name in enumerate(names):
         with cols[i % 2]:
-            st.session_state["hist_show"][name] = st.checkbox(
-                name,
-                value=st.session_state["hist_show"].get(name, True),
-                key=f"{key_prefix}_{name}",
-            )
+            child_key = f"{key_prefix}_{name}"
+            # value=... only used on first creation; afterward state comes from st.session_state[child_key]
+            st.checkbox(name, key=child_key, value=bool(st.session_state.get(child_key, True)))
+            # Mirror widget -> dict for rest of app
+            st.session_state["hist_show"][name] = bool(st.session_state.get(child_key, True))
 
 def toggle_plan_group(master_key: str, names: list[str]):
-    """Plan tab: master 'Show all' toggles child checkboxes."""
+    """Plan: master 'Show all' toggles each child widget key AND the enabled_assets dict."""
     flag = bool(st.session_state.get(master_key, False))
+    if "enabled_assets" not in st.session_state:
+        st.session_state["enabled_assets"] = {}
     for n in names:
-        st.session_state["enabled_assets"][n] = flag
+        child_key = f"en_{n}"
+        st.session_state[child_key] = flag                   # <- actual widget state
+        st.session_state["enabled_assets"][n] = flag         # <- mirror to your dict
 
 def render_plan_group(grp: str, names: list[str], master_key: str):
-    """Plan tab group renderer with working master checkbox."""
+    """Plan group renderer with working master checkbox."""
+    # Ensure dict exists
+    if "enabled_assets" not in st.session_state:
+        st.session_state["enabled_assets"] = {}
+
+    # Initialize child widget keys on first run
+    for n in names:
+        child_key = f"en_{n}"
+        if child_key not in st.session_state:
+            st.session_state[child_key] = bool(st.session_state["enabled_assets"].get(n, True))
+        # Keep dict in sync with widget key
+        st.session_state["enabled_assets"][n] = bool(st.session_state.get(child_key, True))
+
     hL, hR = st.columns([0.7, 0.3])
     with hL:
         st.markdown(f"*{grp}*")
     with hR:
-        # On first load, reflect current children
+        # Compute initial master from child widget keys
+        current_all = all(bool(st.session_state.get(f"en_{n}", True)) for n in names)
         if master_key not in st.session_state:
-            st.session_state[master_key] = all(st.session_state["enabled_assets"].get(n, True) for n in names)
-        # Master drives children via callback
+            st.session_state[master_key] = current_all
         st.checkbox("Show all", key=master_key, on_change=toggle_plan_group, args=(master_key, names))
-        # Optional visual cue (no state mutation)
-        status_all_on = all(st.session_state["enabled_assets"].get(n, True) for n in names)
-        st.caption("All selected" if status_all_on else "Some hidden")
+        st.caption("All selected" if current_all else "Some hidden")
 
-    # Child checkboxes (2-column grid)
+    # Child checkboxes (2-column grid) driven by their widget keys
     cols = st.columns(2)
     for i, n in enumerate(names):
         with cols[i % 2]:
-            st.session_state["enabled_assets"][n] = st.checkbox(
-                n,
-                value=st.session_state["enabled_assets"].get(n, True),
-                key=f"en_{n}",
-            )
+            child_key = f"en_{n}"
+            st.checkbox(n, key=child_key, value=bool(st.session_state.get(child_key, True)))
+            # Mirror widget -> dict for the rest of app
+            st.session_state["enabled_assets"][n] = bool(st.session_state.get(child_key, True))
 
 # =========================================================
 # =========================  TABS  ========================
@@ -405,6 +433,7 @@ with tabs[1]:
     if hist_df.empty:
         st.info("Not enough data to draw the chart yet.")
     else:
+        # derive visible series from dict kept in sync with widget keys
         show_series = [k for k, v in st.session_state["hist_show"].items() if v]
         view = hist_df[hist_df["Series"].isin(show_series)].copy()
         if view.empty:
@@ -423,7 +452,7 @@ with tabs[1]:
             st.altair_chart(chart, use_container_width=True)
             st.caption(st.session_state.get("hist_note",""))
 
-    # ------------------- Tables -------------------
+    # ------------------- Tables (unchanged) -------------------
     def build_uniform_price_table() -> pd.DataFrame:
         rows = []
         for name, df in H.items():
