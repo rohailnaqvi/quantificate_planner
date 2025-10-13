@@ -247,6 +247,95 @@ def window_start_for_label(label:str)->Optional[pd.Timestamp]:
         return max(firsts) if firsts else None
     return None
 
+# ======================================================================
+# ====== Master/child checkbox helpers (top-level, used in tabs) =======
+# ======================================================================
+
+def toggle_hist_group(master_key: str, names: list[str]):
+    """
+    Callback for Explore tab groups:
+    When the master 'Show all' checkbox toggles, push its boolean state into all child checkboxes.
+    """
+    flag = bool(st.session_state.get(master_key, False))
+    for n in names:
+        st.session_state["hist_show"][n] = flag
+
+def render_explore_group(grp: str, names: list[str], key_prefix: str):
+    """
+    Explore tab group renderer with a working master 'Show all' checkbox.
+    The master drives children via on_change callback, and is re-synced after rendering.
+    """
+    hL, hR = st.columns([0.7, 0.3])
+    with hL:
+        st.markdown(f"*{grp}*")
+    with hR:
+        master_key = f"{key_prefix}_master_{grp}"
+        # On first load, reflect current children
+        if master_key not in st.session_state:
+            st.session_state[master_key] = all(st.session_state["hist_show"].get(n, True) for n in names)
+        # Master drives children
+        st.checkbox(
+            "Show all",
+            key=master_key,
+            on_change=toggle_hist_group,
+            args=(master_key, names),
+        )
+
+    # Child checkboxes (2-column grid)
+    cols = st.columns(2)
+    for i, name in enumerate(names):
+        with cols[i % 2]:
+            st.session_state["hist_show"][name] = st.checkbox(
+                name,
+                value=st.session_state["hist_show"].get(name, True),
+                key=f"{key_prefix}_{name}",
+            )
+
+    # Keep master visually in sync with children after rendering
+    st.session_state[master_key] = all(st.session_state["hist_show"].get(n, True) for n in names)
+
+def toggle_plan_group(master_key: str, names: list[str]):
+    """
+    Callback for Plan tab groups:
+    When the master 'Show all' checkbox toggles, push its boolean state into all child checkboxes.
+    """
+    flag = bool(st.session_state.get(master_key, False))
+    for n in names:
+        st.session_state["enabled_assets"][n] = flag
+
+def render_plan_group(grp: str, names: list[str], master_key: str):
+    """
+    Plan tab group renderer with a working master 'Show all' checkbox.
+    The master drives children via on_change callback, and is re-synced after rendering.
+    """
+    hL, hR = st.columns([0.7, 0.3])
+    with hL:
+        st.markdown(f"*{grp}*")
+    with hR:
+        # On first load, reflect current children
+        if master_key not in st.session_state:
+            st.session_state[master_key] = all(st.session_state["enabled_assets"].get(n, True) for n in names)
+        # Master drives children
+        st.checkbox(
+            "Show all",
+            key=master_key,
+            on_change=toggle_plan_group,
+            args=(master_key, names),
+        )
+
+    # Child checkboxes (2-column grid)
+    cols = st.columns(2)
+    for i, n in enumerate(names):
+        with cols[i % 2]:
+            st.session_state["enabled_assets"][n] = st.checkbox(
+                n,
+                value=st.session_state["enabled_assets"].get(n, True),
+                key=f"en_{n}",
+            )
+
+    # Keep master visually in sync with children after rendering
+    st.session_state[master_key] = all(st.session_state["enabled_assets"].get(n, True) for n in names)
+
 # =========================================================
 # =========================  TABS  ========================
 # =========================================================
@@ -293,44 +382,6 @@ with tabs[1]:
     if "hist_show" not in st.session_state:
         st.session_state["hist_show"] = {k: True for k in ALL}
 
-    def toggle_hist_group(master_key: str, names: list[str]):
-    # Callback: when the master "Show all" is toggled, push its state to all children
-    flag = bool(st.session_state.get(master_key, False))
-    for n in names:
-        st.session_state["hist_show"][n] = flag
-
-    def render_explore_group(grp: str, names: list[str], key_prefix: str):
-        hL, hR = st.columns([0.7, 0.3])
-        with hL:
-            st.markdown(f"*{grp}*")
-        with hR:
-            master_key = f"{key_prefix}_master_{grp}"
-    
-            # On first load, make the master reflect current children
-            if master_key not in st.session_state:
-                st.session_state[master_key] = all(st.session_state["hist_show"].get(n, True) for n in names)
-    
-            # Master drives children via callback
-            st.checkbox(
-                "Show all",
-                key=master_key,
-                on_change=toggle_hist_group,
-                args=(master_key, names),
-            )
-    
-        # Child checkboxes (2-column grid)
-        cols = st.columns(2)
-        for i, name in enumerate(names):
-            with cols[i % 2]:
-                st.session_state["hist_show"][name] = st.checkbox(
-                    name,
-                    value=st.session_state["hist_show"].get(name, True),
-                    key=f"{key_prefix}_{name}",
-                )
-    
-        # After children render, keep master visually in sync with them
-        st.session_state[master_key] = all(st.session_state["hist_show"].get(n, True) for n in names)
-
     eA, eB, eC = st.columns(3)
     with eA: render_explore_group("Equity indices", GROUPS["Equity indices"], "histA")
     with eB: render_explore_group("Precious metals", GROUPS["Precious metals"], "histB")
@@ -340,7 +391,10 @@ with tabs[1]:
 
     # Compute chart series when submitted
     if ("hist_df" not in st.session_state) or go_hist:
-        start_amount = parse_money(start_amount_text, 1000)
+        def parse_money_local(s, fallback=1000):
+            try: return max(int(float(str(s).replace(",","").replace("$","").strip())),1)
+            except: return fallback
+        start_amount = parse_money_local(start_amount_text, 1000)
         lb_years = {"1y":1,"5y":5,"10y":10,"15y":15,"20y":20}.get(lookback,None)
         start_override = None if lb_years is not None else pd.Timestamp("2000-01-01")
 
@@ -682,42 +736,6 @@ with tabs[2]:
     if "enabled_assets" not in st.session_state:
         st.session_state["enabled_assets"] = {k: True for k in ALL}
 
-    def toggle_plan_group(master_key: str, names: list[str]):
-    # Callback: when the master "Show all" is toggled, push its state to all children
-    flag = bool(st.session_state.get(master_key, False))
-    for n in names:
-        st.session_state["enabled_assets"][n] = flag
-
-    def render_plan_group(grp: str, names: list[str], master_key: str):
-        hL, hR = st.columns([0.7, 0.3])
-        with hL:
-            st.markdown(f"*{grp}*")
-        with hR:
-            # On first load, make the master reflect current children
-            if master_key not in st.session_state:
-                st.session_state[master_key] = all(st.session_state["enabled_assets"].get(n, True) for n in names)
-    
-            # Master drives children via callback
-            st.checkbox(
-                "Show all",
-                key=master_key,
-                on_change=toggle_plan_group,
-                args=(master_key, names),
-            )
-    
-        # Child checkboxes (2-column grid)
-        cols = st.columns(2)
-        for i, n in enumerate(names):
-            with cols[i % 2]:
-                st.session_state["enabled_assets"][n] = st.checkbox(
-                    n,
-                    value=st.session_state["enabled_assets"].get(n, True),
-                    key=f"en_{n}",
-                )
-    
-        # After children render, keep master visually in sync with them
-        st.session_state[master_key] = all(st.session_state["enabled_assets"].get(n, True) for n in names)
-
     cA, cB, cC = st.columns(3)
     with cA:
         render_plan_group("Equity indices", GROUPS["Equity indices"], "master_Equity indices")
@@ -1050,7 +1068,6 @@ with tabs[2]:
             for t, dt in enumerate(timeline):
                 proj_rows.append({"Series": "Portfolio", "Date": dt, "Value": invest * ((1 + port_cagr) ** t)})
 
-        # allocation is numeric here, so just filter > 0
         eligible = display.loc[
             (display["Index"] != "Portfolio") &
             (pd.to_numeric(display["Allocation %"], errors="coerce") > 0) &
@@ -1158,5 +1175,3 @@ with tabs[3]:
     ]
     st.table(pd.DataFrame(guide_rows, columns=["Asset/Index", "What it tracks (plain English)", "Popular ETFs (examples)"]))
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
-
-
