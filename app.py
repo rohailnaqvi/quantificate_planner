@@ -1,7 +1,7 @@
 # app.py — Quantificate Personal Investment Planner — Guide, Explore, Plan and Execute
 # Header: compact two-column hero (logo + centered title), auto light/dark logos & light favicon
 # Explore: full-width, Step-1-like visual layout for series checkboxes (fixed master/child behavior)
-# Plan: buffered group constraints with safe, deferred apply (no widget-state errors)
+# Plan: outputs-first layout with Action Bar at top; inputs in collapsed expanders; working master/child; bold full-width buttons; Optimize teal
 
 __version__ = "Quantificate PIP v1 (2025-10-03)"
 
@@ -97,11 +97,30 @@ st.markdown(
   .block-container {{padding-top:.6rem; padding-bottom:2.2rem; max-width:1300px;}}
   h1,h2,h3 {{letter-spacing:.2px; color:var(--ink);}}
 
+  /* Global button style tweaks */
   .stButton>button {{
-    border-radius:10px; border:1px solid color-mix(in srgb, var(--teal) 40%, white);
-    color:var(--ink); background:color-mix(in srgb, var(--teal) 8%, white);
+    width: 100%;
+    font-weight: 700; /* bold */
+    border-radius:10px; 
+    border:1px solid color-mix(in srgb, var(--teal) 40%, white);
+    color:var(--ink); 
+    background:color-mix(in srgb, var(--teal) 8%, white);
   }}
-  .stButton>button:hover {{ border-color:var(--teal); background:color-mix(in srgb, var(--teal) 16%, white); }}
+  .stButton>button:hover {{ 
+    border-color:var(--teal); 
+    background:color-mix(in srgb, var(--teal) 16%, white); 
+  }}
+
+  /* Make PRIMARY buttons teal with white text (we'll set Optimize as primary) */
+  button[data-testid="baseButton-primary"] {{
+    background: {BRAND["teal"]} !important;
+    color: #ffffff !important;
+    border-color: {BRAND["teal"]} !important;
+  }}
+  button[data-testid="baseButton-primary"]:hover {{
+    filter: brightness(0.95);
+  }}
+
   .stDataFrame thead tr th {{ background:color-mix(in srgb, var(--teal) 8%, white) !important; }}
 
   /* Compact hero (logo left @60%, title centered) */
@@ -254,26 +273,21 @@ def window_start_for_label(label:str)->Optional[pd.Timestamp]:
 def toggle_hist_group(master_key: str, names: list[str], key_prefix: str):
     """Explore: master 'Show all' toggles each child widget key AND the hist_show dict."""
     flag = bool(st.session_state.get(master_key, False))
-    # Ensure dict exists
     if "hist_show" not in st.session_state:
         st.session_state["hist_show"] = {}
     for n in names:
         child_key = f"{key_prefix}_{n}"
-        st.session_state[child_key] = flag                  # <- actual widget state
-        st.session_state["hist_show"][n] = flag             # <- mirror to your dict
+        st.session_state[child_key] = flag
+        st.session_state["hist_show"][n] = flag
 
 def render_explore_group(grp: str, names: list[str], key_prefix: str):
     """Explore group renderer with working master checkbox."""
-    # Ensure dict exists
     if "hist_show" not in st.session_state:
         st.session_state["hist_show"] = {}
-
-    # Initialize child widget keys on first run
     for n in names:
         child_key = f"{key_prefix}_{n}"
         if child_key not in st.session_state:
             st.session_state[child_key] = bool(st.session_state["hist_show"].get(n, True))
-        # Keep dict in sync with widget key
         st.session_state["hist_show"][n] = bool(st.session_state.get(child_key, True))
 
     hL, hR = st.columns([0.7, 0.3])
@@ -281,21 +295,17 @@ def render_explore_group(grp: str, names: list[str], key_prefix: str):
         st.markdown(f"*{grp}*")
     with hR:
         master_key = f"{key_prefix}_master_{grp}"
-        # Compute initial master state from current children (widget keys)
         current_all = all(bool(st.session_state.get(f"{key_prefix}_{n}", True)) for n in names)
         if master_key not in st.session_state:
             st.session_state[master_key] = current_all
         st.checkbox("Show all", key=master_key, on_change=toggle_hist_group, args=(master_key, names, key_prefix))
         st.caption("All selected" if current_all else "Some hidden")
 
-    # Child checkboxes (2-column grid) driven by their widget keys
     cols = st.columns(2)
     for i, name in enumerate(names):
         with cols[i % 2]:
             child_key = f"{key_prefix}_{name}"
-            # value=... only used on first creation; afterward state comes from st.session_state[child_key]
             st.checkbox(name, key=child_key, value=bool(st.session_state.get(child_key, True)))
-            # Mirror widget -> dict for rest of app
             st.session_state["hist_show"][name] = bool(st.session_state.get(child_key, True))
 
 def toggle_plan_group(master_key: str, names: list[str]):
@@ -305,41 +315,34 @@ def toggle_plan_group(master_key: str, names: list[str]):
         st.session_state["enabled_assets"] = {}
     for n in names:
         child_key = f"en_{n}"
-        st.session_state[child_key] = flag                   # <- actual widget state
-        st.session_state["enabled_assets"][n] = flag         # <- mirror to your dict
+        st.session_state[child_key] = flag
+        st.session_state["enabled_assets"][n] = flag
 
 def render_plan_group(grp: str, names: list[str], master_key: str):
     """Plan group renderer with working master checkbox."""
-    # Ensure dict exists
     if "enabled_assets" not in st.session_state:
         st.session_state["enabled_assets"] = {}
-
-    # Initialize child widget keys on first run
     for n in names:
         child_key = f"en_{n}"
         if child_key not in st.session_state:
             st.session_state[child_key] = bool(st.session_state["enabled_assets"].get(n, True))
-        # Keep dict in sync with widget key
         st.session_state["enabled_assets"][n] = bool(st.session_state.get(child_key, True))
 
     hL, hR = st.columns([0.7, 0.3])
     with hL:
         st.markdown(f"*{grp}*")
     with hR:
-        # Compute initial master from child widget keys
         current_all = all(bool(st.session_state.get(f"en_{n}", True)) for n in names)
         if master_key not in st.session_state:
             st.session_state[master_key] = current_all
         st.checkbox("Show all", key=master_key, on_change=toggle_plan_group, args=(master_key, names))
         st.caption("All selected" if current_all else "Some hidden")
 
-    # Child checkboxes (2-column grid) driven by their widget keys
     cols = st.columns(2)
     for i, n in enumerate(names):
         with cols[i % 2]:
             child_key = f"en_{n}"
             st.checkbox(n, key=child_key, value=bool(st.session_state.get(child_key, True)))
-            # Mirror widget -> dict for the rest of app
             st.session_state["enabled_assets"][n] = bool(st.session_state.get(child_key, True))
 
 # =========================================================
@@ -433,7 +436,6 @@ with tabs[1]:
     if hist_df.empty:
         st.info("Not enough data to draw the chart yet.")
     else:
-        # derive visible series from dict kept in sync with widget keys
         show_series = [k for k, v in st.session_state["hist_show"].items() if v]
         view = hist_df[hist_df["Series"].isin(show_series)].copy()
         if view.empty:
@@ -696,41 +698,6 @@ with tabs[1]:
         tabA = pd.DataFrame(rows_A)[["Index"] + labels]
         return tabA
 
-    st.subheader("Historical Analysis — Tables")
-    with st.expander("Section 1 — Index/Asset Historical Returns Analysis", expanded=False):
-        if pd.notna(REF_LATEST):
-            st.markdown(
-                f"**Reference latest (common):** `{REF_LATEST.date().isoformat()}`  |  "
-                f"**Dynamic targets:** " + " • ".join([f"{ANCHOR_LABELS[y]} → `{TARGET_DATES[y].isoformat()}`" for y in ANCHORS_YEARS if TARGET_DATES[y] is not None]) +
-                f"  |  **Fixed target:** `2000-01-01`"
-            )
-        st.subheader("Table 1: Prices"); st.dataframe(build_uniform_price_table(), use_container_width=True, hide_index=True)
-        st.subheader("Table 2: Years elapsed"); st.dataframe(build_elapsed_years_table(), use_container_width=True, hide_index=True)
-        st.subheader("Table 3: % Change"); st.dataframe(build_pct_change_table(), use_container_width=True, hide_index=True)
-        cagr_num_cached = build_cagr_table_numeric()
-        st.subheader("Table 4: CAGR"); st.dataframe(build_cagr_table_display(cagr_num_cached), use_container_width=True, hide_index=True)
-
-    with st.expander("Section 2 — Historical Risk Assessment (Volatility)", expanded=False):
-        st.subheader("Table 5: Period-specific volatility (daily std dev over window, NOT annualized)")
-        stdev_table_display, stdev_table_raw = build_period_stdev_table(return_raw=True)
-        st.dataframe(stdev_table_display, use_container_width=True, hide_index=True)
-        st.caption("Volatility is the standard deviation of daily simple returns within each window (not annualized).")
-        st.subheader("Table 5b: Annualized volatility (daily std × √252)")
-        annualized_vol_table_display, annualized_vol_raw = build_annualized_vol_tables(stdev_table_raw)
-        st.dataframe(annualized_vol_table_display, use_container_width=True, hide_index=True)
-        st.caption("Annualized volatility derived from Table 5’s daily stdevs by multiplying by √252. Used for Sharpe.")
-
-    with st.expander("Section 3 — Historical Risk Adjusted Returns (Primary Method)", expanded=False):
-        st.subheader("Table 6: Risk-free rate — snapshot at window start (per horizon)")
-        rf_snapshot_table = build_rf_snapshot_table()
-        st.dataframe(rf_snapshot_table, use_container_width=True, hide_index=True)
-        st.caption("RF snapshot per window start uses Yahoo rates: 1y → IRX, 5y → FVX, 10y → TNX, 15y/20y/2000/Max → TYX.")
-        st.subheader("Table 7: Sharpe Ratio — Option A (CAGR − RF snapshot) / Annualized Volatility (from 5b)")
-        sharpe_A_table = build_sharpe_table_optionA(
-            cagr_num=cagr_num_cached, ann_vol_raw=annualized_vol_raw, rf_snap=rf_snapshot_table
-        )
-        st.dataframe(sharpe_A_table, use_container_width=True, hide_index=True)
-
 # =========================================================
 # ================   PLAN (PROJECTIONS)  ==================
 # =========================================================
@@ -738,158 +705,31 @@ with tabs[2]:
     st.subheader("Plan: Build a Simple Forward Projection")
     st.caption("Set allocations, choose a horizon, then Calculate or Optimize. Constraints only apply on 'Apply constraints'.")
 
-    # Step 1 — Choose assets
-    st.markdown("**Step 1 — Choose assets to include**")
+    # ---------- Defaults required BEFORE buttons & outputs ----------
+    # Step 1 defaults
     if "enabled_assets" not in st.session_state:
         st.session_state["enabled_assets"] = {k: True for k in ALL}
-
-    cA, cB, cC = st.columns(3)
-    with cA:
-        render_plan_group("Equity indices", GROUPS["Equity indices"], "master_Equity indices")
-    with cB:
-        render_plan_group("Precious metals", GROUPS["Precious metals"], "master_Precious metals")
-    with cC:
-        render_plan_group("Crypto", GROUPS["Crypto"], "master_Crypto")
-
-    enabled_list = [k for k, v in st.session_state["enabled_assets"].items() if v]
-
-    # Step 2 — Amount, horizon, weights
-    st.markdown("**Step 2 — Set total, horizon & weights**")
+    # Step 2 defaults (bind widgets later to these keys)
+    if "total_investment_text" not in st.session_state:
+        st.session_state["total_investment_text"] = "1,000"
+    if "horizon_years" not in st.session_state:
+        st.session_state["horizon_years"] = 15  # default matches earlier index=10 for 5..25
     if "weights" not in st.session_state:
         eq = round(100 / len(ALL), 2)
         st.session_state["weights"] = {k: eq for k in ALL}
-    c_top = st.columns([1.2, 1])
-    with c_top[0]:
-        inv_text = st.text_input("Total investment ($)", value="1,000")
-    with c_top[1]:
-        horizon = st.selectbox("Horizon (years)", list(range(5, 26)), index=10)
 
-    st.markdown("*Weights (% of portfolio)*")
-    cA, cB, cC = st.columns(3)
-    def weight_box(names, col):
-        with col:
-            for n in names:
-                st.session_state["weights"][n] = st.number_input(
-                    n, min_value=0.0, max_value=100.0, step=0.25,
-                    value=float(st.session_state["weights"][n]),
-                    key=f"w_{n}", disabled=(n not in enabled_list)
-                )
-    weight_box(GROUPS["Equity indices"], cA); weight_box(GROUPS["Precious metals"], cB); weight_box(GROUPS["Crypto"], cC)
+    # Compute enabled list now (updated by Step 1 widgets if user changes them)
+    enabled_list = [k for k, v in st.session_state["enabled_assets"].items() if v]
 
-    w_sum = sum(float(st.session_state["weights"].get(n, 0.0)) for n in enabled_list) if enabled_list else 0.0
-    sum_col, _ = st.columns([0.45, 0.55])
-    if abs(w_sum - 100.0) <= 0.01:
-        sum_col.markdown(f"<span class='pill ok'>Total weights (enabled): {w_sum:.2f}%</span>", unsafe_allow_html=True)
-    elif w_sum < 100.0:
-        sum_col.markdown(f"<span class='pill warn'>Total weights (enabled): {w_sum:.2f}% — add {100.0 - w_sum:.2f}%</span>", unsafe_allow_html=True)
-    else:
-        sum_col.markdown(f"<span class='pill err'>Total weights (enabled): {w_sum:.2f}% — reduce {w_sum - 100.0:.2f}%</span>", unsafe_allow_html=True)
+    # ---------- ACTION BAR (TOP) ----------
+    a1, a2 = st.columns([0.5, 0.5])
+    with a1:
+        do_calc = st.button("Calculate", key="calc_btn")
+    with a2:
+        # Use primary type so our CSS paints it teal + white
+        do_opt  = st.button("Optimize for Sharpe", key="opt_btn", type="primary")
 
-    # ---------- Advanced — Constraints (deferred apply) ----------
-    with st.expander("Advanced (optional) — Weight constraints for Optimizer", expanded=False):
-        if "min_on" not in st.session_state: st.session_state["min_on"] = False
-        if "max_on" not in st.session_state: st.session_state["max_on"] = False
-        c1, c2 = st.columns(2)
-        with c1: st.session_state["min_on"] = st.checkbox("Enable minimums", value=st.session_state["min_on"])
-        with c2: st.session_state["max_on"] = st.checkbox("Enable caps", value=st.session_state["max_on"])
-
-        if "group_apply_toggle" not in st.session_state: st.session_state["group_apply_toggle"] = True
-        st.session_state["group_apply_toggle"] = st.checkbox(
-            "Enable master group constraint inputs (and apply to per-asset ON SUBMIT)",
-            value=st.session_state["group_apply_toggle"]
-        )
-        group_inputs_enabled = bool(st.session_state["group_apply_toggle"])
-
-        if "buf_min" not in st.session_state: st.session_state["buf_min"] = {k: 0.0 for k in ALL}
-        if "buf_max" not in st.session_state: st.session_state["buf_max"] = {k: 100.0 for k in ALL}
-
-        # ======= HANDLE PENDING COPY (BEFORE WIDGETS) =======
-        if st.session_state.get("_constraints_apply_pending", False):
-            if st.session_state.get("group_apply_toggle", True):
-                p_gmin = st.session_state.get("_pending_group_min", {})
-                p_gmax = st.session_state.get("_pending_group_max", {})
-                for grp, names in GROUPS.items():
-                    gmin = float(p_gmin.get(grp, 0.0))
-                    gmax = float(p_gmax.get(grp, 100.0))
-                    for n in names:
-                        if not st.session_state["enabled_assets"].get(n, False): continue
-                        if st.session_state.get("min_on", False):
-                            st.session_state["buf_min"][n] = gmin
-                            st.session_state[f"cmin_{n}"] = gmin
-                        if st.session_state.get("max_on", False):
-                            st.session_state["buf_max"][n] = gmax
-                            st.session_state[f"cmax_{n}"] = gmax
-            st.session_state["_constraints_apply_pending"] = False
-            st.session_state.pop("_pending_group_min", None)
-            st.session_state.pop("_pending_group_max", None)
-        # ======= END PENDING HANDLER =======
-
-        existing_gmin = {g: 0.0 for g in GROUPS.keys()}
-        existing_gmax = {g: 100.0 for g in GROUPS.keys()}
-        existing_gmin.update(st.session_state.get("group_min", {}))
-        existing_gmax.update(st.session_state.get("group_max", {}))
-
-        with st.form("group_constraints_form", clear_on_submit=False):
-            st.subheader("Group-level constraints (buffered)")
-            gA, gB, gC = st.columns(3)
-            gmin_temp, gmax_temp = {}, {}
-            for grp, col in zip(GROUPS.keys(), [gA, gB, gC]):
-                with col:
-                    active_grp = any(st.session_state["enabled_assets"].get(n, False) for n in GROUPS[grp])
-                    disable_min = (not group_inputs_enabled) or (not st.session_state["min_on"]) or (not active_grp)
-                    disable_max = (not group_inputs_enabled) or (not st.session_state["max_on"]) or (not active_grp)
-                    gmin_val = st.number_input(
-                        f"{grp} — Master Min %",
-                        min_value=0.0, max_value=100.0, step=0.5,
-                        value=float(existing_gmin.get(grp, 0.0)),
-                        key=f"gmin_temp_{grp}", disabled=disable_min
-                    )
-                    gmax_val = st.number_input(
-                        f"{grp} — Master Max %",
-                        min_value=0.0, max_value=100.0, step=0.5,
-                        value=float(existing_gmax.get(grp, 100.0)),
-                        key=f"gmax_temp_{grp}", disabled=disable_max
-                    )
-                    gmin_temp[grp] = float(gmin_val); gmax_temp[grp] = float(gmax_val)
-
-            st.divider()
-            st.subheader("Per-asset constraints (the optimizer only reads these)")
-            g1, g2, g3 = st.columns(3)
-            for names, col in zip(GROUPS.values(), [g1, g2, g3]):
-                with col:
-                    for n in names:
-                        active_asset = st.session_state["enabled_assets"].get(n, False)
-                        r = st.columns(2)
-                        with r[0]:
-                            vmin = st.number_input(
-                                f"Min % — {n}", min_value=0.0, max_value=100.0, step=0.5,
-                                value=float(st.session_state.get(f"cmin_{n}", st.session_state["buf_min"].get(n, 0.0))),
-                                key=f"cmin_{n}", disabled=(not active_asset or not st.session_state["min_on"]),
-                            )
-                            st.session_state["buf_min"][n] = float(vmin)
-                        with r[1]:
-                            vmax = st.number_input(
-                                f"Max % — {n}", min_value=0.0, max_value=100.0, step=0.5,
-                                value=float(st.session_state.get(f"cmax_{n}", st.session_state["buf_max"].get(n, 100.0))),
-                                key=f"cmax_{n}", disabled=(not active_asset or not st.session_state["max_on"]),
-                            )
-                            st.session_state["buf_max"][n] = float(vmax)
-            applied = st.form_submit_button("Apply constraints")
-
-        if applied:
-            st.session_state["group_min"] = dict(gmin_temp)
-            st.session_state["group_max"] = dict(gmax_temp)
-            st.session_state["_constraints_apply_pending"] = True
-            st.session_state["_pending_group_min"] = dict(gmin_temp)
-            st.session_state["_pending_group_max"] = dict(gmax_temp)
-            st.rerun()
-
-    # Buttons
-    b1, b2 = st.columns([0.5, 0.5])
-    do_calc = b1.button("Calculate")
-    do_opt  = b2.button("Optimize for Sharpe")
-
-    # ---------- Builders shared with Plan ----------
+    # ---------- Optimize (may set do_calc=True to show outputs immediately) ----------
     @st.cache_data(ttl=24*60*60, show_spinner=False)
     def get_cagr_table() -> pd.DataFrame:
         return build_cagr_table_numeric()
@@ -921,12 +761,11 @@ with tabs[2]:
         note = f"Daily returns from {R.index[0].date()} to {R.index[-1].date()} • n={R.shape[0]} days."
         return ann_vol_df, corr, note
 
-    # ---------- Optimize ----------
     if do_opt:
         normalize_weights_in_state(enabled_list)
         cagr_num = get_cagr_table().set_index("Index")
-        label = window_label(horizon)
-        ann_vol, corr, note = build_vol_and_corr(enabled_list, horizon)
+        label = window_label(st.session_state.get("horizon_years", 15))
+        ann_vol, corr, note = build_vol_and_corr(enabled_list, st.session_state.get("horizon_years", 15))
 
         def g(i: str) -> float:
             return as_float(cagr_num.at[i, label]) if (i in cagr_num.index and label in cagr_num.columns) else np.nan
@@ -946,10 +785,10 @@ with tabs[2]:
                 Rm = corr.loc[usable, usable].to_numpy(dtype=float)
                 np.fill_diagonal(Rm, 1.0); Rm = np.nan_to_num(Rm, nan=0.0)
                 D = np.diag(sig); cov = D @ Rm @ D; cov = (cov + cov.T) / 2.0
-                rf = get_rf_for_horizon(horizon)
+                rf = get_rf_for_horizon(st.session_state.get("horizon_years", 15))
 
-                lb = np.array([float(st.session_state.get(f"cmin_{i}", st.session_state['buf_min'].get(i, 0.0))) / 100.0 for i in usable], dtype=float)
-                ub = np.array([float(st.session_state.get(f"cmax_{i}", st.session_state['buf_max'].get(i, 100.0))) / 100.0 for i in usable], dtype=float)
+                lb = np.array([float(st.session_state.get(f"cmin_{i}", st.session_state.get('buf_min', {}).get(i, 0.0))) / 100.0 for i in usable], dtype=float)
+                ub = np.array([float(st.session_state.get(f"cmax_{i}", st.session_state.get('buf_max', {}).get(i, 100.0))) / 100.0 for i in usable], dtype=float)
                 if not bool(st.session_state.get("min_on", False)): lb = np.zeros_like(lb)
                 if not bool(st.session_state.get("max_on", False)): ub = np.ones_like(ub)
                 if np.any(lb > ub):
@@ -972,7 +811,7 @@ with tabs[2]:
                     for i, name in enumerate(usable):
                         st.session_state["weights"][name] = float(w[i] * 100.0)
                     st.success("Optimized weights applied. Updating table & chart…")
-                    do_calc = True
+                    do_calc = True  # trigger calculation & outputs
 
     # ---------- Projection state init ----------
     if "proj_lines" not in st.session_state: st.session_state["proj_lines"] = pd.DataFrame()
@@ -982,10 +821,11 @@ with tabs[2]:
     if "corr_note" not in st.session_state: st.session_state["corr_note"] = ""
     if "legend_series" not in st.session_state: st.session_state["legend_series"] = ["Portfolio"]
 
-    # ---------- Calculate ----------
+    # ---------- Calculate (uses state set by widgets; widgets come later) ----------
     if do_calc:
         normalize_weights_in_state(enabled_list)
-        invest = parse_money(inv_text, 1000)
+        invest = parse_money(st.session_state.get("total_investment_text", "1,000"), 1000)
+        horizon = int(st.session_state.get("horizon_years", 15))
         label = window_label(horizon)
         rf = get_rf_for_horizon(horizon)
 
@@ -1093,7 +933,7 @@ with tabs[2]:
         for k in list(st.session_state["proj_flags"].keys()):
             if k not in legend_series: del st.session_state["proj_flags"][k]
 
-    # ---------- Projection chart ----------
+    # ---------- OUTPUTS FIRST ----------
     st.subheader("Projection: Portfolio vs Selected Assets (CAGR-based)")
     lines_df = st.session_state.get("proj_lines", pd.DataFrame())
     legend_series = st.session_state.get("legend_series", ["Portfolio"])
@@ -1115,7 +955,7 @@ with tabs[2]:
         st.caption("Legend lists all assets selected in Step 1.")
     with left_plot:
         if lines_df.empty:
-            st.info("Run **Calculate** (or **Optimize**) to generate the projection.")
+            st.info("Press **Calculate** (or **Optimize**) to generate the projection.")
         else:
             visible = [s for s in series if st.session_state["proj_flags"].get(s, True)]
             plot = lines_df[lines_df["Series"].isin(visible)].copy()
@@ -1141,7 +981,6 @@ with tabs[2]:
                     chart = lines
                 st.altair_chart(chart, use_container_width=True)
 
-    # ---------- Projection Table ----------
     st.subheader("Projection Table")
     show_tbl = st.session_state.get("proj_table_display", pd.DataFrame())
     if show_tbl.empty:
@@ -1150,7 +989,6 @@ with tabs[2]:
         st.dataframe(show_tbl, use_container_width=True, hide_index=True)
         st.caption("RF uses latest ^TNX (≤10y horizon) or ^TYX (>10y). Sharpe = (CAGR − RF) / AnnVol.")
 
-    # ---------- Correlation ----------
     st.subheader("Correlation matrix (daily returns)")
     cdf = st.session_state.get("corr_view", pd.DataFrame())
     cnote = st.session_state.get("corr_note", "")
@@ -1159,6 +997,152 @@ with tabs[2]:
     else:
         st.dataframe(cdf, use_container_width=True)
         if cnote: st.caption(cnote)
+
+    # ---------- INPUTS IN COLLAPSED EXPANDERS ----------
+    with st.expander("Step 1 — Choose assets to include", expanded=False):
+        cA, cB, cC = st.columns(3)
+        with cA:
+            render_plan_group("Equity indices", GROUPS["Equity indices"], "master_Equity indices")
+        with cB:
+            render_plan_group("Precious metals", GROUPS["Precious metals"], "master_Precious metals")
+        with cC:
+            render_plan_group("Crypto", GROUPS["Crypto"], "master_Crypto")
+
+    with st.expander("Step 2 — Set total, horizon & weights", expanded=False):
+        c_top = st.columns([1.2, 1])
+        with c_top[0]:
+            st.text_input(
+                "Total investment ($)", 
+                key="total_investment_text", 
+                value=st.session_state.get("total_investment_text", "1,000")
+            )
+        with c_top[1]:
+            # Maintain current value if present
+            current_h = st.session_state.get("horizon_years", 15)
+            options = list(range(5, 26))
+            # find index safely
+            idx = options.index(current_h) if current_h in options else 10
+            sel = st.selectbox("Horizon (years)", options, index=idx, key="horizon_years")
+
+        st.markdown("*Weights (% of portfolio)*")
+        cA, cB, cC = st.columns(3)
+        def weight_box(names, col):
+            with col:
+                for n in names:
+                    st.session_state["weights"][n] = st.number_input(
+                        n, min_value=0.0, max_value=100.0, step=0.25,
+                        value=float(st.session_state["weights"][n]),
+                        key=f"w_{n}", disabled=(n not in [k for k,v in st.session_state['enabled_assets'].items() if v])
+                    )
+        weight_box(GROUPS["Equity indices"], cA); weight_box(GROUPS["Precious metals"], cB); weight_box(GROUPS["Crypto"], cC)
+
+        enabled_list_now = [k for k, v in st.session_state["enabled_assets"].items() if v]
+        w_sum = sum(float(st.session_state["weights"].get(n, 0.0)) for n in enabled_list_now) if enabled_list_now else 0.0
+        sum_col, _ = st.columns([0.45, 0.55])
+        if abs(w_sum - 100.0) <= 0.01:
+            sum_col.markdown(f"<span class='pill ok'>Total weights (enabled): {w_sum:.2f}%</span>", unsafe_allow_html=True)
+        elif w_sum < 100.0:
+            sum_col.markdown(f"<span class='pill warn'>Total weights (enabled): {w_sum:.2f}% — add {100.0 - w_sum:.2f}%</span>", unsafe_allow_html=True)
+        else:
+            sum_col.markdown(f"<span class='pill err'>Total weights (enabled): {w_sum:.2f}% — reduce {w_sum - 100.0:.2f}%</span>", unsafe_allow_html=True)
+
+    with st.expander("Advanced (optional) — Weight constraints for Optimizer", expanded=False):
+        if "min_on" not in st.session_state: st.session_state["min_on"] = False
+        if "max_on" not in st.session_state: st.session_state["max_on"] = False
+        c1, c2 = st.columns(2)
+        with c1: st.session_state["min_on"] = st.checkbox("Enable minimums", value=st.session_state["min_on"])
+        with c2: st.session_state["max_on"] = st.checkbox("Enable caps", value=st.session_state["max_on"])
+
+        if "group_apply_toggle" not in st.session_state: st.session_state["group_apply_toggle"] = True
+        st.session_state["group_apply_toggle"] = st.checkbox(
+            "Enable master group constraint inputs (and apply to per-asset ON SUBMIT)",
+            value=st.session_state["group_apply_toggle"]
+        )
+        group_inputs_enabled = bool(st.session_state["group_apply_toggle"])
+
+        if "buf_min" not in st.session_state: st.session_state["buf_min"] = {k: 0.0 for k in ALL}
+        if "buf_max" not in st.session_state: st.session_state["buf_max"] = {k: 100.0 for k in ALL}
+
+        # ======= HANDLE PENDING COPY (BEFORE WIDGETS) =======
+        if st.session_state.get("_constraints_apply_pending", False):
+            if st.session_state.get("group_apply_toggle", True):
+                p_gmin = st.session_state.get("_pending_group_min", {})
+                p_gmax = st.session_state.get("_pending_group_max", {})
+                for grp, names in GROUPS.items():
+                    gmin = float(p_gmin.get(grp, 0.0))
+                    gmax = float(p_gmax.get(grp, 100.0))
+                    for n in names:
+                        if not st.session_state["enabled_assets"].get(n, False): continue
+                        if st.session_state.get("min_on", False):
+                            st.session_state["buf_min"][n] = gmin
+                            st.session_state[f"cmin_{n}"] = gmin
+                        if st.session_state.get("max_on", False):
+                            st.session_state["buf_max"][n] = gmax
+                            st.session_state[f"cmax_{n}"] = gmax
+            st.session_state["_constraints_apply_pending"] = False
+            st.session_state.pop("_pending_group_min", None)
+            st.session_state.pop("_pending_group_max", None)
+        # ======= END PENDING HANDLER =======
+
+        existing_gmin = {g: 0.0 for g in GROUPS.keys()}
+        existing_gmax = {g: 100.0 for g in GROUPS.keys()}
+        existing_gmin.update(st.session_state.get("group_min", {}))
+        existing_gmax.update(st.session_state.get("group_max", {}))
+
+        with st.form("group_constraints_form", clear_on_submit=False):
+            st.subheader("Group-level constraints (buffered)")
+            gA, gB, gC = st.columns(3)
+            gmin_temp, gmax_temp = {}, {}
+            for grp, col in zip(GROUPS.keys(), [gA, gB, gC]):
+                with col:
+                    active_grp = any(st.session_state["enabled_assets"].get(n, False) for n in GROUPS[grp])
+                    disable_min = (not group_inputs_enabled) or (not st.session_state["min_on"]) or (not active_grp)
+                    disable_max = (not group_inputs_enabled) or (not st.session_state["max_on"]) or (not active_grp)
+                    gmin_val = st.number_input(
+                        f"{grp} — Master Min %",
+                        min_value=0.0, max_value=100.0, step=0.5,
+                        value=float(existing_gmin.get(grp, 0.0)),
+                        key=f"gmin_temp_{grp}", disabled=disable_min
+                    )
+                    gmax_val = st.number_input(
+                        f"{grp} — Master Max %",
+                        min_value=0.0, max_value=100.0, step=0.5,
+                        value=float(existing_gmax.get(grp, 100.0)),
+                        key=f"gmax_temp_{grp}", disabled=disable_max
+                    )
+                    gmin_temp[grp] = float(gmin_val); gmax_temp[grp] = float(gmax_val)
+
+            st.divider()
+            st.subheader("Per-asset constraints (the optimizer only reads these)")
+            g1, g2, g3 = st.columns(3)
+            for names, col in zip(GROUPS.values(), [g1, g2, g3]):
+                with col:
+                    for n in names:
+                        active_asset = st.session_state["enabled_assets"].get(n, False)
+                        r = st.columns(2)
+                        with r[0]:
+                            vmin = st.number_input(
+                                f"Min % — {n}", min_value=0.0, max_value=100.0, step=0.5,
+                                value=float(st.session_state.get(f"cmin_{n}", st.session_state["buf_min"].get(n, 0.0))),
+                                key=f"cmin_{n}", disabled=(not active_asset or not st.session_state["min_on"]),
+                            )
+                            st.session_state["buf_min"][n] = float(vmin)
+                        with r[1]:
+                            vmax = st.number_input(
+                                f"Max % — {n}", min_value=0.0, max_value=100.0, step=0.5,
+                                value=float(st.session_state.get(f"cmax_{n}", st.session_state["buf_max"].get(n, 100.0))),
+                                key=f"cmax_{n}", disabled=(not active_asset or not st.session_state["max_on"]),
+                            )
+                            st.session_state["buf_max"][n] = float(vmax)
+            applied = st.form_submit_button("Apply constraints")
+
+        if applied:
+            st.session_state["group_min"] = dict(gmin_temp)
+            st.session_state["group_max"] = dict(gmax_temp)
+            st.session_state["_constraints_apply_pending"] = True
+            st.session_state["_pending_group_min"] = dict(gmin_temp)
+            st.session_state["_pending_group_max"] = dict(gmax_temp)
+            st.rerun()
 
 # =========================================================
 # ==============  GUIDE (DEFINITIONS & ETFs)  =============
