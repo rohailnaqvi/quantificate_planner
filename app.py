@@ -454,7 +454,24 @@ with tabs[1]:
             st.altair_chart(chart, use_container_width=True)
             st.caption(st.session_state.get("hist_note",""))
 
-    # ------------------- Tables (unchanged) -------------------
+    # === Historical Analysis — Tables (Sections 1–3) ===
+    st.subheader("Historical Analysis — Tables")
+
+    # Section 1 — Index/Asset Historical Returns Analysis
+    with st.expander("Section 1 — Index/Asset Historical Returns Analysis", expanded=False):
+        if pd.notna(REF_LATEST):
+            st.markdown(
+                f"**Reference latest (common):** `{REF_LATEST.date().isoformat()}`  |  "
+                f"**Dynamic targets:** " + " • ".join([f"{ANCHOR_LABELS[y]} → `{TARGET_DATES[y].isoformat()}`"
+                                                      for y in ANCHORS_YEARS if TARGET_DATES[y] is not None]) +
+                f"  |  **Fixed target:** `2000-01-01`"
+            )
+        st.subheader("Table 1: Prices")
+        # Helpers for tables (defined below)
+        # (We intentionally render after functions exist.)
+        pass
+
+    # ------------------- Tables (builders) -------------------
     def build_uniform_price_table() -> pd.DataFrame:
         rows = []
         for name, df in H.items():
@@ -698,6 +715,42 @@ with tabs[1]:
         tabA = pd.DataFrame(rows_A)[["Index"] + labels]
         return tabA
 
+    # ---- Render the Section 1/2/3 tables (now that builders exist) ----
+    with st.expander("Section 1 — Index/Asset Historical Returns Analysis", expanded=False):
+        if pd.notna(REF_LATEST):
+            st.markdown(
+                f"**Reference latest (common):** `{REF_LATEST.date().isoformat()}`  |  "
+                f"**Dynamic targets:** " + " • ".join([f"{ANCHOR_LABELS[y]} → `{TARGET_DATES[y].isoformat()}`"
+                                                      for y in ANCHORS_YEARS if TARGET_DATES[y] is not None]) +
+                f"  |  **Fixed target:** `2000-01-01`"
+            )
+        st.subheader("Table 1: Prices"); st.dataframe(build_uniform_price_table(), use_container_width=True, hide_index=True)
+        st.subheader("Table 2: Years elapsed"); st.dataframe(build_elapsed_years_table(), use_container_width=True, hide_index=True)
+        st.subheader("Table 3: % Change"); st.dataframe(build_pct_change_table(), use_container_width=True, hide_index=True)
+        cagr_num_cached = build_cagr_table_numeric()
+        st.subheader("Table 4: CAGR"); st.dataframe(build_cagr_table_display(cagr_num_cached), use_container_width=True, hide_index=True)
+
+    with st.expander("Section 2 — Historical Risk Assessment (Volatility)", expanded=False):
+        st.subheader("Table 5: Period-specific volatility (daily std dev over window, NOT annualized)")
+        stdev_table_display, stdev_table_raw = build_period_stdev_table(return_raw=True)
+        st.dataframe(stdev_table_display, use_container_width=True, hide_index=True)
+        st.caption("Volatility is the standard deviation of daily simple returns within each window (not annualized).")
+        st.subheader("Table 5b: Annualized volatility (daily std × √252)")
+        annualized_vol_table_display, annualized_vol_raw = build_annualized_vol_tables(stdev_table_raw)
+        st.dataframe(annualized_vol_table_display, use_container_width=True, hide_index=True)
+        st.caption("Annualized volatility derived from Table 5’s daily stdevs by multiplying by √252. Used for Sharpe.")
+
+    with st.expander("Section 3 — Historical Risk Adjusted Returns (Primary Method)", expanded=False):
+        st.subheader("Table 6: Risk-free rate — snapshot at window start (per horizon)")
+        rf_snapshot_table = build_rf_snapshot_table()
+        st.dataframe(rf_snapshot_table, use_container_width=True, hide_index=True)
+        st.caption("RF snapshot per window start uses Yahoo rates: 1y → IRX, 5y → FVX, 10y → TNX, 15y/20y/2000/Max → TYX.")
+        st.subheader("Table 7: Sharpe Ratio — Option A (CAGR − RF snapshot) / Annualized Volatility (from 5b)")
+        sharpe_A_table = build_sharpe_table_optionA(
+            cagr_num=cagr_num_cached, ann_vol_raw=annualized_vol_raw, rf_snap=rf_snapshot_table
+        )
+        st.dataframe(sharpe_A_table, use_container_width=True, hide_index=True)
+
 # =========================================================
 # ================   PLAN (PROJECTIONS)  ==================
 # =========================================================
@@ -706,19 +759,16 @@ with tabs[2]:
     st.caption("Set allocations, choose a horizon, then Calculate or Optimize. Constraints only apply on 'Apply constraints'.")
 
     # ---------- Defaults required BEFORE buttons & outputs ----------
-    # Step 1 defaults
     if "enabled_assets" not in st.session_state:
         st.session_state["enabled_assets"] = {k: True for k in ALL}
-    # Step 2 defaults (bind widgets later to these keys)
     if "total_investment_text" not in st.session_state:
         st.session_state["total_investment_text"] = "1,000"
     if "horizon_years" not in st.session_state:
-        st.session_state["horizon_years"] = 15  # default matches earlier index=10 for 5..25
+        st.session_state["horizon_years"] = 15
     if "weights" not in st.session_state:
         eq = round(100 / len(ALL), 2)
         st.session_state["weights"] = {k: eq for k in ALL}
 
-    # Compute enabled list now (updated by Step 1 widgets if user changes them)
     enabled_list = [k for k, v in st.session_state["enabled_assets"].items() if v]
 
     # ---------- ACTION BAR (TOP) ----------
@@ -726,10 +776,9 @@ with tabs[2]:
     with a1:
         do_calc = st.button("Calculate", key="calc_btn")
     with a2:
-        # Use primary type so our CSS paints it teal + white
         do_opt  = st.button("Optimize for Sharpe", key="opt_btn", type="primary")
 
-    # ---------- Optimize (may set do_calc=True to show outputs immediately) ----------
+    # ---------- Optimize ----------
     @st.cache_data(ttl=24*60*60, show_spinner=False)
     def get_cagr_table() -> pd.DataFrame:
         return build_cagr_table_numeric()
@@ -821,7 +870,7 @@ with tabs[2]:
     if "corr_note" not in st.session_state: st.session_state["corr_note"] = ""
     if "legend_series" not in st.session_state: st.session_state["legend_series"] = ["Portfolio"]
 
-    # ---------- Calculate (uses state set by widgets; widgets come later) ----------
+    # ---------- Calculate ----------
     if do_calc:
         normalize_weights_in_state(enabled_list)
         invest = parse_money(st.session_state.get("total_investment_text", "1,000"), 1000)
@@ -1017,12 +1066,10 @@ with tabs[2]:
                 value=st.session_state.get("total_investment_text", "1,000")
             )
         with c_top[1]:
-            # Maintain current value if present
             current_h = st.session_state.get("horizon_years", 15)
             options = list(range(5, 26))
-            # find index safely
             idx = options.index(current_h) if current_h in options else 10
-            sel = st.selectbox("Horizon (years)", options, index=idx, key="horizon_years")
+            st.selectbox("Horizon (years)", options, index=idx, key="horizon_years")
 
         st.markdown("*Weights (% of portfolio)*")
         cA, cB, cC = st.columns(3)
