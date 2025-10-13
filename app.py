@@ -1,7 +1,6 @@
 # app.py — Quantificate Personal Investment Planner — Guide, Explore, Plan and Execute
-# Explore: full-width, Step-1-like visual layout for series checkboxes (fixed master/child behavior)
-# Plan: outputs-first layout with Action Bar at top; inputs in collapsed expanders; bold full-width buttons; Optimize teal
-# Plan: Projection Table & Guide tables now brand-styled (teal header, zebra rows); Portfolio row highlighted; captions added
+# Consistent brand-styled tables everywhere (Explore Sections 1–3, Plan Projection & Correlation, Guide)
+# Outputs-first Plan layout; bold full-width buttons; Optimize button teal; Apply constraints full-width
 
 __version__ = "Quantificate PIP v1 (2025-10-03)"
 
@@ -106,10 +105,9 @@ st.markdown(
 /* ===== Buttons (global) ===== */
   .stButton > button, .stForm button[kind], .stForm button[data-testid="baseButton"], .stForm [role="button"] {{
     width: 100% !important;
-    font-weight: 700 !important; /* bold */
+    font-weight: 700 !important;
     border-radius:10px;
   }}
-
   .stButton > button:not([data-testid="baseButton-primary"]):not([kind="primary"]) {{
     border:1px solid color-mix(in srgb, var(--teal) 40%, white);
     color:var(--ink);
@@ -119,7 +117,6 @@ st.markdown(
     border-color:var(--teal);
     background:color-mix(in srgb, var(--teal) 16%, white);
   }}
-
   button[data-testid="baseButton-primary"],
   .stButton > button[kind="primary"]{{
     background: var(--primary-color) !important;
@@ -127,35 +124,10 @@ st.markdown(
     border:1px solid var(--primary-color) !important;
   }}
   button[data-testid="baseButton-primary"]:hover,
-  .stButton > button[kind="primary"]:hover {{
-    filter: brightness(0.95);
-  }}
-
-  .stDataFrame thead tr th {{ background:color-mix(in srgb, var(--teal) 8%, white) !important; }}
-
-/* ===== Hero ===== */
-  .brand-hero {{
-    display:grid; grid-template-columns:300px 1fr; gap:24px; align-items:center;
-    margin:.4rem 0 1.0rem 0;
-  }}
-  .brand-logo {{ width:60%; max-width:260px; height:auto; display:block; }}
-  .brand-title {{ text-align:center; }}
-  .brand-title h1 {{ margin:0; font-size:2.2rem; line-height:1.15; }}
-  .brand-sub {{ margin-top:.25rem; color:#475569; font-size:1.05rem; }}
-  .logo-light {{ display:none; }} .logo-dark {{ display:none; }}
-  @media (prefers-color-scheme: light){{ .logo-light {{display:block;}} }}
-  @media (prefers-color-scheme: dark){{ 
-    .logo-dark {{display:block;}} 
-    .brand-title h1 {{color:#e5e7eb;}} .brand-sub {{color:#cbd5e1;}}
-  }}
-
-  .pill {{display:inline-block;padding:.2rem .55rem;border-radius:9999px;font-size:.8rem;font-weight:600}}
-  .ok  {{background: color-mix(in srgb, var(--teal) 12%, white); color:#065f46; border:1px solid color-mix(in srgb, var(--teal) 48%, white)}}
-  .warn{{background: color-mix(in srgb, var(--gold) 12%, white); color:#7c2d12; border:1px solid color-mix(in srgb, var(--gold) 48%, white)}}
-  .err {{background:#fee2e2; color:#7f1d1d; border:1px solid #fecaca}}
+  .stButton > button[kind="primary"]:hover {{ filter: brightness(0.95); }}
 
   /* Generic wrapper to allow horizontal scroll for custom HTML tables */
-  .q-table-wrap {{ overflow-x:auto; }}
+  .q-table-wrap {{ width:100%; overflow-x:auto; }}
 </style>
 """,
     unsafe_allow_html=True,
@@ -165,11 +137,11 @@ st.markdown(
 if DATAURI_LOGO_LIGHT or DATAURI_LOGO_DARK_T:
     st.markdown(
         f"""
-<div class="brand-hero">
-  <div>{f'<img class="brand-logo logo-light" src="{DATAURI_LOGO_LIGHT}">' if DATAURI_LOGO_LIGHT else ''}{f'<img class="brand-logo logo-dark" src="{DATAURI_LOGO_DARK_T}">' if DATAURI_LOGO_DARK_T else ''}</div>
-  <div class="brand-title">
-    <h1>Personal Investment Planner</h1>
-    <div class="brand-sub">Guide, Explore, Plan and Execute</div>
+<div style="display:grid; grid-template-columns:300px 1fr; gap:24px; align-items:center; margin:.4rem 0 1.0rem 0;">
+  <div>{f'<img style="width:60%; max-width:260px; height:auto; display:block;" class="logo-light" src="{DATAURI_LOGO_LIGHT}">' if DATAURI_LOGO_LIGHT else ''}{f'<img style="width:60%; max-width:260px; height:auto; display:block;" class="logo-dark" src="{DATAURI_LOGO_DARK_T}">' if DATAURI_LOGO_DARK_T else ''}</div>
+  <div style="text-align:center;">
+    <h1 style="margin:0; font-size:2.2rem; line-height:1.15;">Personal Investment Planner</h1>
+    <div style="margin-top:.25rem; color:#475569; font-size:1.05rem;">Guide, Explore, Plan and Execute</div>
     <div style="margin-top:6px; font-size:.85rem; color:#64748b;">Build: Quantificate PIP v1 ({__version__.split()[-1]})</div>
   </div>
 </div>
@@ -179,6 +151,57 @@ if DATAURI_LOGO_LIGHT or DATAURI_LOGO_DARK_T:
 else:
     st.title("Personal Investment Planner")
     st.caption(f"Build: {__version__}")
+
+# ---------- Table styling helper (used everywhere) ----------
+def styled_table_html(
+    df: pd.DataFrame,
+    *,
+    highlight_portfolio: bool = False,
+    index_as_column: Optional[str] = None,
+    right_align_numeric: bool = True,
+) -> str:
+    """Return HTML for a brand-styled table. Full width. Optional 'Portfolio' highlight, optional index as first column."""
+    if df is None or df.empty:
+        return ""
+
+    work = df.copy()
+    if index_as_column is not None:
+        work = work.reset_index().rename(columns={"index": index_as_column})
+
+    # Portfolio highlight
+    def _highlight_portfolio(row):
+        if not highlight_portfolio:
+            return [""] * len(row)
+        is_port = (str(row.get("Index", "")) == "Portfolio")
+        style = "background-color: color-mix(in srgb, var(--teal) 12%, white); color: #0f172a; font-weight: 700;"
+        return [style if is_port else "" for _ in row]
+
+    # Base styles
+    table_styles = [
+        {"selector":"thead th",
+         "props":[("background","color-mix(in srgb, var(--teal) 18%, white)"),
+                  ("color","#0f172a"), ("font-weight","700"),
+                  ("border-bottom","1px solid #d1d5db"), ("padding","8px 10px")]}
+        ,
+        {"selector":"tbody td",
+         "props":[("border-bottom","1px solid color-mix(in srgb, var(--gray) 40%, white)"),
+                  ("padding","8px 10px"), ("vertical-align","middle")]}
+        ,
+        {"selector":"tbody tr:nth-child(even)",
+         "props":[("background-color","color-mix(in srgb, var(--gray) 15%, white)")]},
+        {"selector":"tbody tr:hover td",
+         "props":[("background-color","color-mix(in srgb, var(--sky) 10%, white)")]},
+        {"selector":"table",
+         "props":[("border-collapse","collapse"), ("font-size","0.95rem"), ("width","100%")]}
+    ]
+
+    styler = work.style.hide(axis="index").set_table_styles(table_styles).apply(_highlight_portfolio, axis=1)
+
+    if right_align_numeric:
+        num_cols = [c for c in work.columns if c != "Index"]
+        styler = styler.set_properties(subset=num_cols, **{"text-align":"right"})
+
+    return styler.to_html(escape=False)
 
 # ---------- Universe ----------
 INDEX_TICKERS = {
@@ -284,7 +307,6 @@ def window_start_for_label(label:str)->Optional[pd.Timestamp]:
 # ======================================================================
 
 def toggle_hist_group(master_key: str, names: list[str], key_prefix: str):
-    """Explore: master 'Show all' toggles each child widget key AND the hist_show dict."""
     flag = bool(st.session_state.get(master_key, False))
     if "hist_show" not in st.session_state:
         st.session_state["hist_show"] = {}
@@ -294,7 +316,6 @@ def toggle_hist_group(master_key: str, names: list[str], key_prefix: str):
         st.session_state["hist_show"][n] = flag
 
 def render_explore_group(grp: str, names: list[str], key_prefix: str):
-    """Explore group renderer with working master checkbox."""
     if "hist_show" not in st.session_state:
         st.session_state["hist_show"] = {}
     for n in names:
@@ -322,7 +343,6 @@ def render_explore_group(grp: str, names: list[str], key_prefix: str):
             st.session_state["hist_show"][name] = bool(st.session_state.get(child_key, True))
 
 def toggle_plan_group(master_key: str, names: list[str]):
-    """Plan: master 'Show all' toggles each child widget key AND the enabled_assets dict."""
     flag = bool(st.session_state.get(master_key, False))
     if "enabled_assets" not in st.session_state:
         st.session_state["enabled_assets"] = {}
@@ -332,7 +352,6 @@ def toggle_plan_group(master_key: str, names: list[str]):
         st.session_state["enabled_assets"][n] = flag
 
 def render_plan_group(grp: str, names: list[str], master_key: str):
-    """Plan group renderer with working master checkbox."""
     if "enabled_assets" not in st.session_state:
         st.session_state["enabled_assets"] = {}
     for n in names:
@@ -387,7 +406,7 @@ We start with broad market building blocks (indexes & core assets), see how they
 with tabs[1]:
     st.subheader("Growth of a Custom Investment")
 
-    # Controls (form — columns created INSIDE the form)
+    # Controls
     with st.form("history_controls", clear_on_submit=False):
         c_ctrl = st.columns([0.28, 0.22, 0.22, 0.18, 0.10])
         with c_ctrl[0]:
@@ -399,7 +418,7 @@ with tabs[1]:
         with c_ctrl[4]:
             go_hist = st.form_submit_button("Update", use_container_width=True)
 
-    # FULL-WIDTH series checklist
+    # Series checklist
     st.markdown("**Series to show (chart only):**")
     if "hist_show" not in st.session_state:
         st.session_state["hist_show"] = {k: True for k in ALL}
@@ -444,7 +463,7 @@ with tabs[1]:
         st.session_state["hist_df"] = pd.concat(rows, ignore_index=True) if rows else pd.DataFrame(columns=["Date","Value","Series"])
         st.session_state["hist_note"] = f"Lookback: {lookback} • Frequency: {freq} • Start: ${int(start_amount):,}"
 
-    # Chart (full width)
+    # Chart
     hist_df = st.session_state.get("hist_df", pd.DataFrame())
     if hist_df.empty:
         st.info("Not enough data to draw the chart yet.")
@@ -467,10 +486,7 @@ with tabs[1]:
             st.altair_chart(chart, use_container_width=True)
             st.caption(st.session_state.get("hist_note",""))
 
-    # === Historical Analysis — Tables (Sections 1–3) ===
-    st.subheader("Historical Analysis — Tables")
-
-    # ------------------- Tables (builders) -------------------
+    # ---------------- Builders for tables ----------------
     def build_uniform_price_table() -> pd.DataFrame:
         rows = []
         for name, df in H.items():
@@ -692,8 +708,7 @@ with tabs[1]:
             row[lab] = fmt_pct_abs(rf) if pd.notna(rf) else ""
         return pd.DataFrame([row])[["Index"] + labels]
 
-    def build_sharpe_table_optionA(cagr_num: pd.DataFrame, ann_vol_raw: pd.DataFrame,
-                                   rf_snap: pd.DataFrame) -> pd.DataFrame:
+    def build_sharpe_table_optionA(cagr_num: pd.DataFrame, ann_vol_raw: pd.DataFrame, rf_snap: pd.DataFrame) -> pd.DataFrame:
         labels = [ANCHOR_LABELS[y] for y in ANCHORS_YEARS if y != 0] + ["2000-01-01"] + ["Max"]
         cagr = cagr_num.set_index("Index"); sig_ann = ann_vol_raw.set_index("Index")
         rfA = rf_snap.set_index("Index").iloc[0]
@@ -714,7 +729,9 @@ with tabs[1]:
         tabA = pd.DataFrame(rows_A)[["Index"] + labels]
         return tabA
 
-    # ---- Render the Section 1/2/3 tables (single, real versions) ----
+    # ---- Render Sections with brand-styled tables ----
+    st.subheader("Historical Analysis — Tables")
+
     with st.expander("Section 1 — Index/Asset Historical Returns Analysis", expanded=False):
         if pd.notna(REF_LATEST):
             st.markdown(
@@ -723,32 +740,36 @@ with tabs[1]:
                                                       for y in ANCHORS_YEARS if TARGET_DATES[y] is not None]) +
                 f"  |  **Fixed target:** `2000-01-01`"
             )
-        st.subheader("Table 1: Prices"); st.dataframe(build_uniform_price_table(), use_container_width=True, hide_index=True)
-        st.subheader("Table 2: Years elapsed"); st.dataframe(build_elapsed_years_table(), use_container_width=True, hide_index=True)
-        st.subheader("Table 3: % Change"); st.dataframe(build_pct_change_table(), use_container_width=True, hide_index=True)
-        cagr_num_cached = build_cagr_table_numeric()
-        st.subheader("Table 4: CAGR"); st.dataframe(build_cagr_table_display(cagr_num_cached), use_container_width=True, hide_index=True)
+        t1 = styled_table_html(build_uniform_price_table())
+        t2 = styled_table_html(build_elapsed_years_table())
+        t3 = styled_table_html(build_pct_change_table())
+        t4 = styled_table_html(build_cagr_table_display(build_cagr_table_numeric()))
+        st.markdown(f"<div class='q-table-wrap'>{t1}</div>", unsafe_allow_html=True); st.caption("Table 1: Prices")
+        st.markdown(f"<div class='q-table-wrap'>{t2}</div>", unsafe_allow_html=True); st.caption("Table 2: Years elapsed")
+        st.markdown(f"<div class='q-table-wrap'>{t3}</div>", unsafe_allow_html=True); st.caption("Table 3: % Change")
+        st.markdown(f"<div class='q-table-wrap'>{t4}</div>", unsafe_allow_html=True); st.caption("Table 4: CAGR")
 
     with st.expander("Section 2 — Historical Risk Assessment (Volatility)", expanded=False):
-        st.subheader("Table 5: Period-specific volatility (daily std dev over window, NOT annualized)")
         stdev_table_display, stdev_table_raw = build_period_stdev_table(return_raw=True)
-        st.dataframe(stdev_table_display, use_container_width=True, hide_index=True)
-        st.caption("Volatility is the standard deviation of daily simple returns within each window (not annualized).")
-        st.subheader("Table 5b: Annualized volatility (daily std × √252)")
+        t5  = styled_table_html(stdev_table_display)
+        st.markdown(f"<div class='q-table-wrap'>{t5}</div>", unsafe_allow_html=True)
+        st.caption("Table 5: Period-specific volatility (daily std dev over window, NOT annualized)")
         annualized_vol_table_display, annualized_vol_raw = build_annualized_vol_tables(stdev_table_raw)
-        st.dataframe(annualized_vol_table_display, use_container_width=True, hide_index=True)
-        st.caption("Annualized volatility derived from Table 5’s daily stdevs by multiplying by √252. Used for Sharpe.")
+        t5b = styled_table_html(annualized_vol_table_display)
+        st.markdown(f"<div class='q-table-wrap'>{t5b}</div>", unsafe_allow_html=True)
+        st.caption("Table 5b: Annualized volatility = daily std × √252")
 
     with st.expander("Section 3 — Historical Risk Adjusted Returns (Primary Method)", expanded=False):
-        st.subheader("Table 6: Risk-free rate — snapshot at window start (per horizon)")
         rf_snapshot_table = build_rf_snapshot_table()
-        st.dataframe(rf_snapshot_table, use_container_width=True, hide_index=True)
-        st.caption("RF snapshot per window start uses Yahoo rates: 1y → IRX, 5y → FVX, 10y → TNX, 15y/20y/2000/Max → TYX.")
-        st.subheader("Table 7: Sharpe Ratio — Option A (CAGR − RF snapshot) / Annualized Volatility (from 5b)")
+        t6  = styled_table_html(rf_snapshot_table)
         sharpe_A_table = build_sharpe_table_optionA(
-            cagr_num=cagr_num_cached, ann_vol_raw=annualized_vol_raw, rf_snap=rf_snapshot_table
+            cagr_num=build_cagr_table_numeric(), ann_vol_raw=annualized_vol_raw, rf_snap=rf_snapshot_table
         )
-        st.dataframe(sharpe_A_table, use_container_width=True, hide_index=True)
+        t7  = styled_table_html(sharpe_A_table)
+        st.markdown(f"<div class='q-table-wrap'>{t6}</div>", unsafe_allow_html=True)
+        st.caption("Table 6: Risk-free rate — snapshot at window start (IRX/FVX/TNX/TYX)")
+        st.markdown(f"<div class='q-table-wrap'>{t7}</div>", unsafe_allow_html=True)
+        st.caption("Table 7: Sharpe Ratio — (CAGR − RF snapshot) / Annualized Volatility")
 
 # =========================================================
 # ================   PLAN (PROJECTIONS)  ==================
@@ -757,7 +778,7 @@ with tabs[2]:
     st.subheader("Plan: Build a Simple Forward Projection")
     st.caption("Set allocations, choose a horizon, then Calculate or Optimize. Constraints only apply on 'Apply constraints'.")
 
-    # ---------- Defaults required BEFORE buttons & outputs ----------
+    # Defaults
     if "enabled_assets" not in st.session_state:
         st.session_state["enabled_assets"] = {k: True for k in ALL}
     if "total_investment_text" not in st.session_state:
@@ -770,14 +791,14 @@ with tabs[2]:
 
     enabled_list = [k for k, v in st.session_state["enabled_assets"].items() if v]
 
-    # ---------- ACTION BAR (TOP) ----------
+    # Action bar
     a1, a2 = st.columns([0.5, 0.5], gap="large")
     with a1:
         do_calc = st.button("Calculate", key="calc_btn", use_container_width=True)
     with a2:
         do_opt  = st.button("Optimize for Sharpe", key="opt_btn", type="primary", use_container_width=True)
 
-    # ---------- Optimize helpers ----------
+    # Helpers
     @st.cache_data(ttl=24*60*60, show_spinner=False)
     def get_cagr_table() -> pd.DataFrame:
         return build_cagr_table_numeric()
@@ -809,6 +830,7 @@ with tabs[2]:
         note = f"Daily returns from {R.index[0].date()} to {R.index[-1].date()} • n={R.shape[0]} days."
         return ann_vol_df, corr, note
 
+    # Optimize
     if do_opt:
         normalize_weights_in_state(enabled_list)
         cagr_num = get_cagr_table().set_index("Index")
@@ -859,9 +881,9 @@ with tabs[2]:
                     for i, name in enumerate(usable):
                         st.session_state["weights"][name] = float(w[i] * 100.0)
                     st.success("Optimized weights applied. Updating table & chart…")
-                    do_calc = True  # trigger calculation & outputs
+                    do_calc = True
 
-    # ---------- Projection state init ----------
+    # Projection state init
     if "proj_lines" not in st.session_state: st.session_state["proj_lines"] = pd.DataFrame()
     if "proj_table_display" not in st.session_state: st.session_state["proj_table_display"] = pd.DataFrame()
     if "proj_table_raw" not in st.session_state: st.session_state["proj_table_raw"] = pd.DataFrame()
@@ -870,7 +892,7 @@ with tabs[2]:
     if "corr_note" not in st.session_state: st.session_state["corr_note"] = ""
     if "legend_series" not in st.session_state: st.session_state["legend_series"] = ["Portfolio"]
 
-    # ---------- Calculate ----------
+    # Calculate
     if do_calc:
         normalize_weights_in_state(enabled_list)
         invest = parse_money(st.session_state.get("total_investment_text", "1,000"), 1000)
@@ -939,7 +961,7 @@ with tabs[2]:
         }])
         display = pd.concat([table, totals], ignore_index=True)
 
-        # Save formatted display for chart/legend
+        # Save formatted display for table
         show_tbl = display.copy()
         show_tbl["Allocation %"] = show_tbl["Allocation %"].map(lambda v: f"{v:.2f}%")
         show_tbl["Allocation $"] = show_tbl["Allocation $"].map(lambda v: f"{int(round(v)):,}")
@@ -985,7 +1007,7 @@ with tabs[2]:
         for k in list(st.session_state["proj_flags"].keys()):
             if k not in legend_series: del st.session_state["proj_flags"][k]
 
-    # ---------- OUTPUTS FIRST ----------
+    # OUTPUTS
     st.subheader("Projection: Portfolio vs Selected Assets (CAGR-based)")
     lines_df = st.session_state.get("proj_lines", pd.DataFrame())
     legend_series = st.session_state.get("legend_series", ["Portfolio"])
@@ -1033,56 +1055,17 @@ with tabs[2]:
                     chart = lines
                 st.altair_chart(chart, use_container_width=True)
 
-    # ---------- BRAND-STYLED PROJECTION TABLE ----------
+    # BRAND-STYLED PROJECTION TABLE
     st.subheader("Projection Table")
-
-    def _style_projection_table(df_disp: pd.DataFrame) -> str:
-        """Return HTML for a styled projection table. Highlights 'Portfolio' row."""
-        if df_disp is None or df_disp.empty:
-            return ""
-        df = df_disp.copy()
-        df = df.reset_index(drop=True)
-
-        # Helper: highlight portfolio row
-        def highlight_portfolio(row):
-            bg = "background-color: color-mix(in srgb, var(--teal) 12%, white); color: #0f172a; font-weight: 700;"
-            empty = ""
-            return [bg if (str(row.get("Index","")) == "Portfolio") else empty for _ in row]
-
-        # Build Styler
-        styler = (
-            df.style
-              .hide(axis="index")
-              .set_table_styles([
-                  {"selector":"thead th",
-                   "props":[("background","color-mix(in srgb, var(--teal) 18%, white)"),
-                            ("color","#0f172a"), ("font-weight","700"), ("border-bottom","1px solid #d1d5db")]},
-                  {"selector":"tbody td",
-                   "props":[("border-bottom","1px solid color-mix(in srgb, var(--gray) 40%, white)"),
-                            ("padding","8px 10px"), ("vertical-align","middle")]},
-                  {"selector":"tbody tr:nth-child(even)",
-                   "props":[("background-color","color-mix(in srgb, var(--gray) 15%, white)")]},
-                  {"selector":"tbody tr:hover td",
-                   "props":[("background-color","color-mix(in srgb, var(--sky) 10%, white)")]},
-                  {"selector":"table",
-                   "props":[("border-collapse","collapse"), ("font-size","0.95rem")]}
-              ])
-              .apply(highlight_portfolio, axis=1)
-        )
-        # Right-align numeric columns (all except 'Index')
-        num_cols = [c for c in df.columns if c != "Index"]
-        styler = styler.set_properties(subset=num_cols, **{"text-align":"right"})
-        return styler.to_html(escape=False)
-
     show_tbl = st.session_state.get("proj_table_display", pd.DataFrame())
     if show_tbl.empty:
         st.info("Press **Calculate** (or **Optimize**) to compute the table.")
     else:
-        html = _style_projection_table(show_tbl)
-        st.markdown(f"<div class='q-table-wrap'>{html}</div>", unsafe_allow_html=True)
+        html_proj = styled_table_html(show_tbl, highlight_portfolio=True)
+        st.markdown(f"<div class='q-table-wrap'>{html_proj}</div>", unsafe_allow_html=True)
         st.caption(
             "Assumptions used in this projection:  "
-            "• **CAGR source** — If horizon < 5y → uses **10-year** historical CAGR; 5–10y → **10-year**; "
+            "• **CAGR source** — If horizon < 5y → **10-year** historical CAGR; 5–10y → **10-year**; "
             ">10–15y → **15-year**; >15–20y → **20-year**; >20y → **Max window**.  "
             "• **Annualized volatility** — Daily return std dev over the **past T years** (your selected horizon), × √252, using overlapping dates across enabled assets.  "
             "• **Risk-free (RF)** — Latest **^TNX** (≤10y horizons) or **^TYX** (>10y horizons).  "
@@ -1095,10 +1078,12 @@ with tabs[2]:
     if cdf.empty:
         st.info("Not available yet. Press **Calculate** (or **Optimize**) after picking assets/horizon.")
     else:
-        st.dataframe(cdf, use_container_width=True)
+        # Make index a first column named 'Asset' so it reads nicely
+        corr_html = styled_table_html(cdf, index_as_column="Asset")
+        st.markdown(f"<div class='q-table-wrap'>{corr_html}</div>", unsafe_allow_html=True)
         if cnote: st.caption(cnote)
 
-    # ---------- INPUTS IN COLLAPSED EXPANDERS ----------
+    # INPUTS
     with st.expander("Step 1 — Choose assets to include", expanded=False):
         cA, cB, cC = st.columns(3)
         with cA:
@@ -1111,11 +1096,7 @@ with tabs[2]:
     with st.expander("Step 2 — Set total, horizon & weights", expanded=False):
         c_top = st.columns([1.2, 1])
         with c_top[0]:
-            st.text_input(
-                "Total investment ($)", 
-                key="total_investment_text", 
-                value=st.session_state.get("total_investment_text", "1,000")
-            )
+            st.text_input("Total investment ($)", key="total_investment_text", value=st.session_state.get("total_investment_text", "1,000"))
         with c_top[1]:
             current_h = st.session_state.get("horizon_years", 15)
             options = list(range(5, 26))
@@ -1161,7 +1142,7 @@ with tabs[2]:
         if "buf_min" not in st.session_state: st.session_state["buf_min"] = {k: 0.0 for k in ALL}
         if "buf_max" not in st.session_state: st.session_state["buf_max"] = {k: 100.0 for k in ALL}
 
-        # ======= HANDLE PENDING COPY (BEFORE WIDGETS) =======
+        # Pending copy
         if st.session_state.get("_constraints_apply_pending", False):
             if st.session_state.get("group_apply_toggle", True):
                 p_gmin = st.session_state.get("_pending_group_min", {})
@@ -1180,7 +1161,6 @@ with tabs[2]:
             st.session_state["_constraints_apply_pending"] = False
             st.session_state.pop("_pending_group_min", None)
             st.session_state.pop("_pending_group_max", None)
-        # ======= END PENDING HANDLER =======
 
         existing_gmin = {g: 0.0 for g in GROUPS.keys()}
         existing_gmax = {g: 100.0 for g in GROUPS.keys()}
@@ -1250,7 +1230,6 @@ with tabs[3]:
     st.subheader("What are these indexes & assets? How do I invest in them?")
     st.caption("Plain-English descriptions and example ETFs you can research further.")
 
-    # Build guide rows with richer blurbs + official links
     def link(text, url): return f"<a href='{url}' target='_blank'>{text}</a>"
 
     ETF_URL = {
@@ -1314,26 +1293,6 @@ with tabs[3]:
     ]
     guide_df = pd.DataFrame(guide_rows, columns=["Asset/Index", "What it tracks & what it is", "Where to invest (examples)"])
 
-    # Brand-styled Guide table (HTML via Styler so we can keep links)
-    def _style_guide_table(df_disp: pd.DataFrame) -> str:
-        df = df_disp.copy()
-        def base_styles():
-            return [
-                {"selector":"thead th",
-                 "props":[("background","color-mix(in srgb, var(--teal) 18%, white)"),
-                          ("color","#0f172a"), ("font-weight","700"), ("border-bottom","1px solid #d1d5db")]},
-                {"selector":"tbody td",
-                 "props":[("border-bottom","1px solid color-mix(in srgb, var(--gray) 40%, white)"),
-                          ("padding","8px 10px"), ("vertical-align","top")]},
-                {"selector":"tbody tr:nth-child(even)",
-                 "props":[("background-color","color-mix(in srgb, var(--gray) 15%, white)")]},
-                {"selector":"tbody tr:hover td",
-                 "props":[("background-color","color-mix(in srgb, var(--sky) 10%, white)")]},
-                {"selector":"table",
-                 "props":[("border-collapse","collapse"), ("font-size","0.95rem")]}
-            ]
-        styler = df.style.hide(axis="index").set_table_styles(base_styles())
-        return styler.to_html(escape=False)
-
-    st.markdown(f"<div class='q-table-wrap'>{_style_guide_table(guide_df)}</div>", unsafe_allow_html=True)
+    guide_html = styled_table_html(guide_df)
+    st.markdown(f"<div class='q-table-wrap'>{guide_html}</div>", unsafe_allow_html=True)
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
