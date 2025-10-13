@@ -293,26 +293,43 @@ with tabs[1]:
     if "hist_show" not in st.session_state:
         st.session_state["hist_show"] = {k: True for k in ALL}
 
-    def render_explore_group(grp: str, names: list[str], key_prefix: str):
-        hL, hR = st.columns([0.7, 0.3])
-        with hL:
-            st.markdown(f"*{grp}*")
-        with hR:
-            all_on = all(st.session_state["hist_show"].get(n, True) for n in names)
-            master = st.checkbox("Show all", value=all_on, key=f"{key_prefix}_master_{grp}")
-            if master and not all_on:
-                for n in names:
-                    st.session_state["hist_show"][n] = True
-            elif (not master) and all_on:
-                for n in names:
-                    st.session_state["hist_show"][n] = False
+    def toggle_hist_group(master_key: str, names: list[str]):
+    # Callback: when the master "Show all" is toggled, push its state to all children
+    flag = bool(st.session_state.get(master_key, False))
+    for n in names:
+        st.session_state["hist_show"][n] = flag
 
-        cols = st.columns(2)  # neat 2-col grid like Plan
-        for i, name in enumerate(names):
-            with cols[i % 2]:
-                st.session_state["hist_show"][name] = st.checkbox(
-                    name, value=st.session_state["hist_show"].get(name, True), key=f"{key_prefix}_{name}"
-                )
+def render_explore_group(grp: str, names: list[str], key_prefix: str):
+    hL, hR = st.columns([0.7, 0.3])
+    with hL:
+        st.markdown(f"*{grp}*")
+    with hR:
+        master_key = f"{key_prefix}_master_{grp}"
+
+        # On first load, make the master reflect current children
+        if master_key not in st.session_state:
+            st.session_state[master_key] = all(st.session_state["hist_show"].get(n, True) for n in names)
+
+        # Master drives children via callback
+        st.checkbox(
+            "Show all",
+            key=master_key,
+            on_change=toggle_hist_group,
+            args=(master_key, names),
+        )
+
+    # Child checkboxes (2-column grid)
+    cols = st.columns(2)
+    for i, name in enumerate(names):
+        with cols[i % 2]:
+            st.session_state["hist_show"][name] = st.checkbox(
+                name,
+                value=st.session_state["hist_show"].get(name, True),
+                key=f"{key_prefix}_{name}",
+            )
+
+    # After children render, keep master visually in sync with them
+    st.session_state[master_key] = all(st.session_state["hist_show"].get(n, True) for n in names)
 
     eA, eB, eC = st.columns(3)
     with eA: render_explore_group("Equity indices", GROUPS["Equity indices"], "histA")
@@ -665,28 +682,41 @@ with tabs[2]:
     if "enabled_assets" not in st.session_state:
         st.session_state["enabled_assets"] = {k: True for k in ALL}
 
-    def render_plan_group(grp: str, names: list[str], master_key: str):
-        hL, hR = st.columns([0.7, 0.3])
-        with hL:
-            st.markdown(f"*{grp}*")
-        with hR:
-            all_on = all(st.session_state["enabled_assets"].get(n, True) for n in names)
-            master = st.checkbox("Show all", value=all_on, key=master_key)
-            if master and not all_on:
-                for n in names:
-                    st.session_state["enabled_assets"][n] = True
-            elif (not master) and all_on:
-                for n in names:
-                    st.session_state["enabled_assets"][n] = False
+    def toggle_plan_group(master_key: str, names: list[str]):
+    # Callback: when the master "Show all" is toggled, push its state to all children
+    flag = bool(st.session_state.get(master_key, False))
+    for n in names:
+        st.session_state["enabled_assets"][n] = flag
 
-        cols = st.columns(2)
-        for i, n in enumerate(names):
-            with cols[i % 2]:
-                st.session_state["enabled_assets"][n] = st.checkbox(
-                    n,
-                    value=st.session_state["enabled_assets"].get(n, True),
-                    key=f"en_{n}",
-                )
+def render_plan_group(grp: str, names: list[str], master_key: str):
+    hL, hR = st.columns([0.7, 0.3])
+    with hL:
+        st.markdown(f"*{grp}*")
+    with hR:
+        # On first load, make the master reflect current children
+        if master_key not in st.session_state:
+            st.session_state[master_key] = all(st.session_state["enabled_assets"].get(n, True) for n in names)
+
+        # Master drives children via callback
+        st.checkbox(
+            "Show all",
+            key=master_key,
+            on_change=toggle_plan_group,
+            args=(master_key, names),
+        )
+
+    # Child checkboxes (2-column grid)
+    cols = st.columns(2)
+    for i, n in enumerate(names):
+        with cols[i % 2]:
+            st.session_state["enabled_assets"][n] = st.checkbox(
+                n,
+                value=st.session_state["enabled_assets"].get(n, True),
+                key=f"en_{n}",
+            )
+
+    # After children render, keep master visually in sync with them
+    st.session_state[master_key] = all(st.session_state["enabled_assets"].get(n, True) for n in names)
 
     cA, cB, cC = st.columns(3)
     with cA:
@@ -1128,3 +1158,4 @@ with tabs[3]:
     ]
     st.table(pd.DataFrame(guide_rows, columns=["Asset/Index", "What it tracks (plain English)", "Popular ETFs (examples)"]))
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
+
