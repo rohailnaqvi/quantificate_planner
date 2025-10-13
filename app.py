@@ -1,6 +1,6 @@
 # app.py — Quantificate Personal Investment Planner — Guide, Explore, Plan and Execute
 # Header: compact two-column hero (logo + centered title), auto light/dark logos & light favicon
-# Explore: full-width, Step-1-like visual layout for series checkboxes (no behavior change)
+# Explore: full-width, Step-1-like visual layout for series checkboxes
 # Plan: buffered group constraints with safe, deferred apply (no widget-state errors)
 
 __version__ = "Quantificate PIP v1 (2025-10-03)"
@@ -252,19 +252,13 @@ def window_start_for_label(label:str)->Optional[pd.Timestamp]:
 # ======================================================================
 
 def toggle_hist_group(master_key: str, names: list[str]):
-    """
-    Callback for Explore tab groups:
-    When the master 'Show all' checkbox toggles, push its boolean state into all child checkboxes.
-    """
+    """Explore tab: master 'Show all' toggles child checkboxes."""
     flag = bool(st.session_state.get(master_key, False))
     for n in names:
         st.session_state["hist_show"][n] = flag
 
 def render_explore_group(grp: str, names: list[str], key_prefix: str):
-    """
-    Explore tab group renderer with a working master 'Show all' checkbox.
-    The master drives children via on_change callback, and is re-synced after rendering.
-    """
+    """Explore tab group renderer with working master checkbox."""
     hL, hR = st.columns([0.7, 0.3])
     with hL:
         st.markdown(f"*{grp}*")
@@ -273,13 +267,11 @@ def render_explore_group(grp: str, names: list[str], key_prefix: str):
         # On first load, reflect current children
         if master_key not in st.session_state:
             st.session_state[master_key] = all(st.session_state["hist_show"].get(n, True) for n in names)
-        # Master drives children
-        st.checkbox(
-            "Show all",
-            key=master_key,
-            on_change=toggle_hist_group,
-            args=(master_key, names),
-        )
+        # Master drives children via callback
+        st.checkbox("Show all", key=master_key, on_change=toggle_hist_group, args=(master_key, names))
+        # Optional visual cue (no state mutation)
+        status_all_on = all(st.session_state["hist_show"].get(n, True) for n in names)
+        st.caption("All selected" if status_all_on else "Some hidden")
 
     # Child checkboxes (2-column grid)
     cols = st.columns(2)
@@ -291,23 +283,14 @@ def render_explore_group(grp: str, names: list[str], key_prefix: str):
                 key=f"{key_prefix}_{name}",
             )
 
-    # Keep master visually in sync with children after rendering
-    st.session_state[master_key] = all(st.session_state["hist_show"].get(n, True) for n in names)
-
 def toggle_plan_group(master_key: str, names: list[str]):
-    """
-    Callback for Plan tab groups:
-    When the master 'Show all' checkbox toggles, push its boolean state into all child checkboxes.
-    """
+    """Plan tab: master 'Show all' toggles child checkboxes."""
     flag = bool(st.session_state.get(master_key, False))
     for n in names:
         st.session_state["enabled_assets"][n] = flag
 
 def render_plan_group(grp: str, names: list[str], master_key: str):
-    """
-    Plan tab group renderer with a working master 'Show all' checkbox.
-    The master drives children via on_change callback, and is re-synced after rendering.
-    """
+    """Plan tab group renderer with working master checkbox."""
     hL, hR = st.columns([0.7, 0.3])
     with hL:
         st.markdown(f"*{grp}*")
@@ -315,13 +298,11 @@ def render_plan_group(grp: str, names: list[str], master_key: str):
         # On first load, reflect current children
         if master_key not in st.session_state:
             st.session_state[master_key] = all(st.session_state["enabled_assets"].get(n, True) for n in names)
-        # Master drives children
-        st.checkbox(
-            "Show all",
-            key=master_key,
-            on_change=toggle_plan_group,
-            args=(master_key, names),
-        )
+        # Master drives children via callback
+        st.checkbox("Show all", key=master_key, on_change=toggle_plan_group, args=(master_key, names))
+        # Optional visual cue (no state mutation)
+        status_all_on = all(st.session_state["enabled_assets"].get(n, True) for n in names)
+        st.caption("All selected" if status_all_on else "Some hidden")
 
     # Child checkboxes (2-column grid)
     cols = st.columns(2)
@@ -332,9 +313,6 @@ def render_plan_group(grp: str, names: list[str], master_key: str):
                 value=st.session_state["enabled_assets"].get(n, True),
                 key=f"en_{n}",
             )
-
-    # Keep master visually in sync with children after rendering
-    st.session_state[master_key] = all(st.session_state["enabled_assets"].get(n, True) for n in names)
 
 # =========================================================
 # =========================  TABS  ========================
@@ -377,7 +355,7 @@ with tabs[1]:
         with c_ctrl[4]:
             go_hist = st.form_submit_button("Update")
 
-    # FULL-WIDTH series checklist (visuals like Plan Step 1, behavior unchanged)
+    # FULL-WIDTH series checklist
     st.markdown("**Series to show (chart only):**")
     if "hist_show" not in st.session_state:
         st.session_state["hist_show"] = {k: True for k in ALL}
@@ -445,7 +423,7 @@ with tabs[1]:
             st.altair_chart(chart, use_container_width=True)
             st.caption(st.session_state.get("hist_note",""))
 
-    # ------------------- Tables (unchanged) -------------------
+    # ------------------- Tables -------------------
     def build_uniform_price_table() -> pd.DataFrame:
         rows = []
         for name, df in H.items():
@@ -731,7 +709,7 @@ with tabs[2]:
     st.subheader("Plan: Build a Simple Forward Projection")
     st.caption("Set allocations, choose a horizon, then Calculate or Optimize. Constraints only apply on 'Apply constraints'.")
 
-    # Step 1 — Choose assets (visual layout like screenshot)
+    # Step 1 — Choose assets
     st.markdown("**Step 1 — Choose assets to include**")
     if "enabled_assets" not in st.session_state:
         st.session_state["enabled_assets"] = {k: True for k in ALL}
