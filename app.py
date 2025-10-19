@@ -370,7 +370,7 @@ with tabs[0]:
     st.subheader("Welcome to Quantificate")
     st.write(
         """
-**Hello and welcome to the **Quantificate Personal Investment Planner** 🎉  
+Hello and welcome to the **Quantificate Personal Investment Planner** 🎉  
 
 The purpose of this planner is to take you on a *journey through the basics of investing* — breaking things down step by step 🪜 — and to give you a fresh, honest perspective on how we can look at growing wealth 🌱.
 
@@ -1477,5 +1477,6 @@ with tabs[3]:
 
     st.markdown(f"<div class='q-table-wrap'>{_style_guide_table(guide_df)}</div>", unsafe_allow_html=True)
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
+
 
 
