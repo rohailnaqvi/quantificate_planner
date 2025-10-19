@@ -370,14 +370,154 @@ with tabs[0]:
     st.subheader("Welcome to Quantificate")
     st.write(
         """
-**This app is for anyone who’s ever thought “I should invest” and then immediately felt stuck.**  
-We start with broad market building blocks (indexes & core assets), see how they behaved, then plan a simple allocation you can understand.
+**Hello and welcome to the **Quantificate Personal Investment Planner** 🎉  
 
-1. **Explore (History):** View how indices, metals, and crypto moved over time.
-2. **Plan (Projections):** Choose weights, horizon, and (optionally) optimize for Sharpe.
-3. **Guide:** Plain-English definitions + popular ETF examples.
+The purpose of this planner is to take you on a *journey through the basics of investing* — breaking things down step by step 🪜 — and to give you a fresh, honest perspective on how we can look at growing wealth 🌱.
 
-*Educational sandbox — not investment advice.*
+But before we get into all that, let’s talk about a couple of things that really matter 💬👇
+
+---
+
+## 🧭 1. How I’d Like You to Use This App
+
+If there’s one thing I’d love for you to take away from this planner, it’s this: **money (and growing it)** is one of the most personal and sensitive parts of our lives 💰❤️ — right up there with our beliefs, perspectives, and families.  
+
+When it comes to advice about money — or any wealth-related topic — I believe everyone has the right to question it, critique it, and make sure they fully understand what it means (including its consequences). That means asking:
+- *Why?*  
+- *What’s my current situation?*  
+- *What risks am I taking?*  
+- *Am I ready for this journey?*  
+
+It’s in that same spirit that I want to share two important things 💡:
+
+**a.** If any output or learning from this app doesn’t pass your *common sense test*, please ignore it completely — or better yet, use it as a cue to research further 🕵️‍♀️. (I know I would!)  
+
+**b.** This app is **purely for educational purposes** and does *not* constitute financial or investment advice ⚠️.  
+Think of the app’s output as *directional* — a way to explore, not prescribe.  
+
+The reason is simple: the app relies on *historical data*, and no matter what anyone tells you, **past performance is never a reliable predictor of the future** 📉➡️📈 (ironic, I know).  
+
+You might wonder, *then what’s the point?* 🤔  
+Well, when we look at historical data across time, we start to see **patterns and trends** — in average returns, volatility, and correlation.  
+And in the absence of (or alongside) current or future information, *statistical trend analysis* can help us find some direction — not certainty, but insight.
+
+---
+
+## 💭 2. A Personal Story (and Why This Exists)
+
+When I graduated with a major in finance 🎓, friends and family often asked me:  
+> “Which stocks should I buy?”  
+> “What assets are guaranteed winners?”  
+
+And my answer was *always* the same — **“It depends.”**  
+(Yes, not very satisfying when you’re talking to a bunch of uncles 😅)
+
+The reason? Most people are looking for that *golden ticket* — a magic stock or crypto that will skyrocket 🚀. And sure, luck and timing have made many Bitcoin and Nvidia millionaires. But for most of us, **wealth creation has always been a slow and steady process** ⏳.
+
+Investing heavily in a single asset or a small group of assets can lead to huge gains — but it also brings **huge risks** ⚠️.  
+History is full of examples: Enron, the dot-com bubble, the 2007–08 crisis, crypto collapses 💥.  
+So my “it depends” answer was always my way of understanding whether the person asking knew about the **risk-return trade-off** — and how diversification protects against the downside.
+
+👉 **Your money is YOUR money.**  
+You owe it to yourself (and those you care about ❤️) to make it work *for* you, not *against* you.
+
+---
+
+## 🙋‍♂️ 3. A Quick Reality Check
+
+Before we go any further, I want to make something very clear.  
+I’m **not** a financial guru, or an investment genius 🧠💼.  
+I haven’t minted millions from trading, and I’m not smarter than anyone who’s reading this.  
+
+I’m just someone with a couple of degrees in finance and business 🎓 who’s also on his own journey to build wealth gradually.  
+
+If you don’t know me personally and have read this far, a little skepticism might be kicking in — and that’s **great** 🙌.  
+That means you care enough to question, and that tells me we both understand how delicate conversations around money and investing really are 💬💰.
+
+From here on, we’ll build a journey together — using data, analysis, and thoughtful assumptions.
+
+---
+
+## 📊 4. The Idea of Diversification
+
+Earlier we talked about the risk of investing in a single asset or a small set of assets.  
+One way to manage that risk is by **investing in the market** itself — meaning in **indices** that represent a collection of companies 🏦📈.
+
+These indices (like the S&P 500) help *diversify* risk.  
+While any one company can fail, the probability of the *entire market* collapsing to zero is very low.  
+
+Of course, markets *do* have downturns — the 2007/08 financial crisis brought the economy to its knees 😬.  
+But even then, while the S&P 500 fell more than 50% from its peak, it recovered — and went on to reach new highs 📈.  
+
+That’s the power of diversification — and why indices can be a safer foundation for long-term investing.
+
+---
+
+## ⏳ 5. The Trade-Off: Risk vs. Return
+
+Because indices average out performance across many companies, their returns are usually *less volatile* than individual stocks.  
+So yes, the upside potential might not be as flashy as a lucky stock pick, but the downside risk is also lower. ⚖️  
+
+And here’s the kicker — over the *long run*, most professional fund managers who pick stocks don’t consistently outperform the market itself.  
+
+That’s why patience is key 🕰️.  
+Wealth creation isn’t about timing the market — it’s about **time *in* the market.**  
+
+My belief? An economy typically takes close to a decade to experience a full cycle of highs and lows.  
+So success in investing comes from **knowledge, analysis, experience, discipline, and patience** (and maybe a touch of luck 🍀).
+
+---
+
+## 🧩 6. So What Is This App Really About?
+
+In short — this app is for anyone who’s ever thought:  
+> “I should invest…”  
+> “…but I have no idea where to start!” 😅
+
+We begin with the *building blocks* of the market — key indices, gold & silver, and the two most well-known cryptos: Bitcoin & Ethereum 🪙.  
+
+I’ve deliberately skipped debt and exotic instruments — they’re harder to access for retail investors and need deeper understanding (that’s a course for another day 🎓).  
+
+This app has 4 main tabs:
+
+1. **Welcome (You’re here!)** 👋 – Overview, purpose, and my thoughts.  
+2. **Explore (History)** 📜 – See how indices, metals, and crypto moved over time.  
+3. **Plan (Projections)** 🔮 – Project potential future performance using assumptions, choose weights and time horizons, and even optimize for Sharpe ratio (a fancy way to measure risk-adjusted returns).  
+4. **Guide** 📘 – Plain-English explanations of each index or asset + examples of ETFs that track them (like Vanguard, iShares, or Fidelity).  
+
+---
+
+## 🎥 7. How to Get Started
+
+For a complete walkthrough, check out the **How-To video** 🎬 on [Quantificate.ca](https://quantificate.ca).  
+In it, I give a step-by-step demo of each tab and share a few nuances and thought processes behind how to interpret the outputs.
+
+If videos aren’t your thing, that’s fine too — you can jump straight in and explore 🧭.  
+But I *strongly* recommend watching it (even at 1.5x speed 😄).
+
+---
+
+## 🧠 8. A Friendly Reminder
+
+This app is for **education** — not investment advice.  
+If you use any of the portfolio allocations or outputs, always apply your *common sense test* ✅ and do your own research before making real investment decisions.  
+
+I’ll keep testing and improving the app 🔧, validating its results with independent Excel calculations (because honestly, finance majors trust Excel more than Python sometimes 😅).  
+
+A read-only Google Sheet will also be linked on the site, which you can copy and use as your personal reference.
+
+Mistakes happen — but my goal is to build *checks and balances* to keep everything accurate and transparent 🔍.
+
+---
+
+## 🎯 9. Closing Thoughts
+
+If you’ve made it this far — **thank you** 🙏  
+I truly appreciate you taking the time to read through my thoughts and approach.  
+
+Now go ahead — dive in, explore, and most importantly… **have fun!** 🚀💡  
+
+**– Rohail**
 """
     )
 
@@ -1337,4 +1477,5 @@ with tabs[3]:
 
     st.markdown(f"<div class='q-table-wrap'>{_style_guide_table(guide_df)}</div>", unsafe_allow_html=True)
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
+
 
