@@ -98,6 +98,21 @@ st.markdown(
     --gray:{BRAND["gray"]};
     --white:{BRAND["white"]};
     --primary-color:{BRAND["teal"]};
+
+    /* THEME TOKENS FOR TABLES (light defaults) */
+    --surface: #ffffff;               /* base for color-mix so zebra/hover work in both themes */
+    --ink-strong: #0f172a;            /* table text color */
+    --muted-ink: #475569;
+    --border-token: rgba(0,0,0,0.08);
+  }}
+
+  @media (prefers-color-scheme: dark) {{
+    :root {{
+      --surface: #0b1220;             /* darker mix base for dark mode */
+      --ink-strong: #e5e7eb;
+      --muted-ink: #cbd5e1;
+      --border-token: rgba(255,255,255,0.12);
+    }}
   }}
 
   .block-container {{padding-top:.6rem; padding-bottom:2.2rem; max-width:1300px;}}
@@ -156,6 +171,8 @@ st.markdown(
 
   /* Generic wrapper to allow horizontal scroll for custom HTML tables */
   .q-table-wrap {{ overflow-x:auto; }}
+  /* Ensure custom tables don't force white backgrounds in dark mode */
+  .q-table-wrap table {{ background: transparent; }}
 </style>
 """,
     unsafe_allow_html=True,
@@ -1177,17 +1194,17 @@ with tabs[2]:
     st.subheader("Projection Table")
 
     def _style_projection_table(df_disp: pd.DataFrame) -> str:
-        """Return HTML for a styled projection table. Highlights 'Portfolio' row."""
+        """Return HTML for a styled projection table. Highlights 'Portfolio' row (theme-aware)."""
         if df_disp is None or df_disp.empty:
             return ""
         df = df_disp.copy()
         df = df.reset_index(drop=True)
 
-        # Helper: highlight portfolio row
+        # Helper: highlight portfolio row (theme-aware)
         def highlight_portfolio(row):
-            bg = "background-color: color-mix(in srgb, var(--teal) 12%, white); color: #0f172a; font-weight: 700;"
+            bg = "background-color: color-mix(in srgb, var(--teal) 12%, var(--surface)); color: var(--ink-strong); font-weight: 700;"
             empty = ""
-            return [bg if (str(row.get("Index","")) == "Portfolio") else empty for _ in row]
+            return [bg if (str(row.get('Index','')) == 'Portfolio') else empty for _ in row]
 
         # Build Styler
         styler = (
@@ -1195,15 +1212,15 @@ with tabs[2]:
               .hide(axis="index")
               .set_table_styles([
                   {"selector":"thead th",
-                   "props":[("background","color-mix(in srgb, var(--teal) 18%, white)"),
-                            ("color","#0f172a"), ("font-weight","700"), ("border-bottom","1px solid #d1d5db")]},
+                   "props":[("background","color-mix(in srgb, var(--teal) 18%, var(--surface))"),
+                            ("color","var(--ink-strong)"), ("font-weight","700"), ("border-bottom","1px solid var(--border-token)")]},
                   {"selector":"tbody td",
-                   "props":[("border-bottom","1px solid color-mix(in srgb, var(--gray) 40%, white)"),
-                            ("padding","8px 10px"), ("vertical-align","middle")]},
+                   "props":[("border-bottom","1px solid color-mix(in srgb, var(--gray) 40%, var(--surface))"),
+                            ("padding","8px 10px"), ("vertical-align","middle"), ("color","var(--ink-strong)")]},
                   {"selector":"tbody tr:nth-child(even)",
-                   "props":[("background-color","color-mix(in srgb, var(--gray) 15%, white)")]},
+                   "props":[("background-color","color-mix(in srgb, var(--gray) 15%, var(--surface))")]},
                   {"selector":"tbody tr:hover td",
-                   "props":[("background-color","color-mix(in srgb, var(--sky) 10%, white)")]},
+                   "props":[("background-color","color-mix(in srgb, var(--sky) 10%, var(--surface))")]},
                   {"selector":"table",
                    "props":[("border-collapse","collapse"), ("font-size","0.95rem")]}
               ])
@@ -1460,15 +1477,15 @@ with tabs[3]:
         def base_styles():
             return [
                 {"selector":"thead th",
-                 "props":[("background","color-mix(in srgb, var(--teal) 18%, white)"),
-                          ("color","#0f172a"), ("font-weight","700"), ("border-bottom","1px solid #d1d5db")]},
+                 "props":[("background","color-mix(in srgb, var(--teal) 18%, var(--surface))"),
+                          ("color","var(--ink-strong)"), ("font-weight","700"), ("border-bottom","1px solid var(--border-token)")]},
                 {"selector":"tbody td",
-                 "props":[("border-bottom","1px solid color-mix(in srgb, var(--gray) 40%, white)"),
-                          ("padding","8px 10px"), ("vertical-align","top")]},
+                 "props":[("border-bottom","1px solid color-mix(in srgb, var(--gray) 40%, var(--surface))"),
+                          ("padding","8px 10px"), ("vertical-align","top"), ("color","var(--ink-strong)")]},
                 {"selector":"tbody tr:nth-child(even)",
-                 "props":[("background-color","color-mix(in srgb, var(--gray) 15%, white)")]},
+                 "props":[("background-color","color-mix(in srgb, var(--gray) 15%, var(--surface))")]},
                 {"selector":"tbody tr:hover td",
-                 "props":[("background-color","color-mix(in srgb, var(--sky) 10%, white)")]},
+                 "props":[("background-color","color-mix(in srgb, var(--sky) 10%, var(--surface))")]},
                 {"selector":"table",
                  "props":[("border-collapse","collapse"), ("font-size","0.95rem")]}
             ]
@@ -1477,7 +1494,3 @@ with tabs[3]:
 
     st.markdown(f"<div class='q-table-wrap'>{_style_guide_table(guide_df)}</div>", unsafe_allow_html=True)
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
-
-
-
-
