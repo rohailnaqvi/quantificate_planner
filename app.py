@@ -1471,8 +1471,8 @@ with tabs[3]:
          f"{link('VTI', ETF_URL['VTI'])} or {link('ITOT', ETF_URL['ITOT'])} can proxy"),
         ("Wilshire 5000",
          "Classic ‘total U.S. market’ concept (all U.S. equities). Often approximated via total-market ETFs.",
-         "Direct ETF;" f"{link('VTI', ETF_URL['VTI'])} or 
-         common proxies: {link('VTI', ETF_URL['VTI'])}, {link('ITOT', ETF_URL['ITOT'])}"),
+         "Direct ETF; " 
+         f"{link('VTI', ETF_URL['VTI'])} or {link('VTI', ETF_URL['VTI'])}, {link('ITOT', ETF_URL['ITOT'])} can proxy"),
         ("Gold (via GLD/IAU)",
          "Exposure to the price of gold bullion. Often used for diversification and as a potential inflation hedge.",
          f"{link('GLD', ETF_URL['GLD'])} (alt: {link('IAU', ETF_URL['IAU'])}) or purchase physcial gold but premiums may apply on small denominations"),
@@ -1511,6 +1511,7 @@ with tabs[3]:
 
     st.markdown(f"<div class='q-table-wrap'>{_style_guide_table(guide_df)}</div>", unsafe_allow_html=True)
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
+
 
 
 
