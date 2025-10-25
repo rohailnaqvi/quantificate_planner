@@ -173,6 +173,15 @@ st.markdown(
   .q-table-wrap {{ overflow-x:auto; }}
   /* Ensure custom tables don't force white backgrounds in dark mode */
   .q-table-wrap table {{ background: transparent; }}
+    /* ✅ Make projection table stretch to full width */
+  .q-table-full {
+      width: 100%;
+      max-width: 100%;
+  }
+  .q-table-full table {
+      width: 100%;
+  }
+
 </style>
 """,
     unsafe_allow_html=True,
@@ -1236,7 +1245,7 @@ with tabs[2]:
         st.info("Press **Calculate** (or **Optimize**) to compute the table.")
     else:
         html = _style_projection_table(show_tbl)
-        st.markdown(f"<div class='q-table-wrap'>{html}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='q-table-wrap q-table-full'>{html}</div>", unsafe_allow_html=True)
         st.caption(
             "Assumptions used in this projection:  "
             "• **CAGR source** — If horizon < 5y → uses **10-year** historical CAGR; 5–10y → **10-year**; "
@@ -1494,3 +1503,4 @@ with tabs[3]:
 
     st.markdown(f"<div class='q-table-wrap'>{_style_guide_table(guide_df)}</div>", unsafe_allow_html=True)
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
+
