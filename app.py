@@ -1424,7 +1424,7 @@ with tabs[3]:
         "SPY":"https://www.ssga.com/us/en/individual/etfs/funds/spdr-sp-500-etf-trust-spy",
         "DIA":"https://www.ssga.com/us/en/individual/etfs/funds/spdr-dow-jones-industrial-average-etf-trust-dia",
         "QQQ":"https://www.invesco.com/us/financial-products/etfs/product-detail?productId=QQQ",
-        "ONEQ":"https://www.fidelity.com/etfs/fidelity-oneq/overview",
+        "ONEQ":"https://digital.fidelity.com/prgw/digital/research/quote/dashboard/summary?symbol=ONEQ",
         "IWB":"https://www.ishares.com/us/products/239707/iwb-ishares-russell-1000-etf",
         "IWM":"https://www.ishares.com/us/products/239710/iwm-ishares-russell-2000-etf",
         "IWV":"https://www.ishares.com/us/products/239707/#/holdings?tab=overview&fundTicker=IWV",
@@ -1502,5 +1502,6 @@ with tabs[3]:
 
     st.markdown(f"<div class='q-table-wrap'>{_style_guide_table(guide_df)}</div>", unsafe_allow_html=True)
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
+
 
 
