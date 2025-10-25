@@ -173,15 +173,14 @@ st.markdown(
   .q-table-wrap {{ overflow-x:auto; }}
   /* Ensure custom tables don't force white backgrounds in dark mode */
   .q-table-wrap table {{ background: transparent; }}
-    /* ✅ Make projection table stretch to full width */
-  .q-table-full {
+     /* ✅ Make projection table stretch to full width */
+  .q-table-full {{
       width: 100%;
       max-width: 100%;
-  }
-  .q-table-full table {
+  }}
+  .q-table-full table {{
       width: 100%;
-  }
-
+  }}
 </style>
 """,
     unsafe_allow_html=True,
@@ -1503,4 +1502,5 @@ with tabs[3]:
 
     st.markdown(f"<div class='q-table-wrap'>{_style_guide_table(guide_df)}</div>", unsafe_allow_html=True)
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
+
 
