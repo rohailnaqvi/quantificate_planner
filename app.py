@@ -1426,15 +1426,24 @@ with tabs[3]:
         "QQQ":"https://www.invesco.com/us/financial-products/etfs/product-detail?productId=QQQ",
         "ONEQ":"https://digital.fidelity.com/prgw/digital/research/quote/dashboard/summary?symbol=ONEQ",
         "IWB":"https://www.ishares.com/us/products/239707/iwb-ishares-russell-1000-etf",
+        "VONE":"https://investor.vanguard.com/investment-products/etfs/profile/vone",
         "IWM":"https://www.ishares.com/us/products/239710/iwm-ishares-russell-2000-etf",
-        "IWV":"https://www.ishares.com/us/products/239707/#/holdings?tab=overview&fundTicker=IWV",
+        "VTWO":"https://investor.vanguard.com/investment-products/etfs/profile/vtwo",
+        "IWV":"https://www.ishares.com/us/products/239714/ishares-russell-3000-etf",
+        "VTHR":"https://investor.vanguard.com/investment-products/etfs/profile/vthr",
         "VTI":"https://investor.vanguard.com/investment-products/etfs/profile/vti",
         "ITOT":"https://www.ishares.com/us/products/239724/itot-ishares-core-sp-total-us-stock-market-etf",
         "SCHB":"https://www.schwabassetmanagement.com/products/schb",
+        "WFIVX":"https://fundresearch.fidelity.com/mutual-funds/summary/971897855",
         "GLD":"https://www.spdrgoldshares.com/usa/",
         "IAU":"https://www.ishares.com/us/products/239561/ishares-gold-trust-fund",
         "SLV":"https://www.ishares.com/us/products/239855/ishares-silver-trust-fund",
-        "SIVR":"https://www.abrdn.com/en-us/us/investor/funds/abrdn-physical-silver-shares-etf-sivr"
+        "SIVR":"https://www.abrdn.com/en-us/us/investor/funds/abrdn-physical-silver-shares-etf-sivr",
+        "FBTC":"https://www.fidelity.ca/en/products/etfs/fbtc/",
+        "IBIT":"https://www.ishares.com/us/products/333011/ishares-bitcoin-trust-etf",
+        "ETHA":"https://www.ishares.com/us/products/337614/ishares-ethereum-trust-etf",
+        "FETH":"https://www.fidelity.ca/en/products/funds/eth/",
+        "EETH":"https://www.proshares.com/our-etfs/strategic/eeth"
     }
 
     guide_rows = [
@@ -1449,33 +1458,33 @@ with tabs[3]:
          f"{link('ONEQ', ETF_URL['ONEQ'])} (Composite proxy); NASDAQ-100: {link('QQQ', ETF_URL['QQQ'])}"),
         ("Russell 1000",
          "Large & mid-cap segment of the U.S. market (top ~1000 stocks by market cap). Represents most of total market value.",
-         f"{link('IWB', ETF_URL['IWB'])}"),
+         f"{link('IWB', ETF_URL['IWB'])}, {link('VONE', ETF_URL['VONE'])}"),
         ("Russell 2000",
          "Small-cap U.S. stocks (ranked below the Russell 1000). Higher volatility and growth potential; more sensitive to the domestic economy.",
-         f"{link('IWM', ETF_URL['IWM'])}"),
+         f"{link('IWM', ETF_URL['IWM'])}, {link('VTHR', ETF_URL['VTHR'])}"),
         ("Russell 3000",
          "Nearly the entire U.S. stock market (~3000 stocks). Often proxied by total-market funds.",
-         f"{link('IWV', ETF_URL['IWV'])}; total-market: {link('VTI', ETF_URL['VTI'])}, {link('SCHB', ETF_URL['SCHB'])}, {link('ITOT', ETF_URL['ITOT'])}"),
+         f"{link('IWV', ETF_URL['IWV'])}, {link('VTHR', ETF_URL['VTHR'])}; total-market: {link('VTI', ETF_URL['VTI'])}, {link('SCHB', ETF_URL['SCHB'])}, {link('ITOT', ETF_URL['ITOT'])}"),
         ("NYSE Composite",
          "All common stocks listed on the NYSE. Broad coverage across sectors and market caps, though not commonly tracked by a single ETF.",
          "No pure-play ETF; total-market funds like "
          f"{link('VTI', ETF_URL['VTI'])} or {link('ITOT', ETF_URL['ITOT'])} can proxy"),
         ("Wilshire 5000",
          "Classic ‘total U.S. market’ concept (all U.S. equities). Often approximated via total-market ETFs.",
-         "No direct ETF; common proxies: "
-         f"{link('VTI', ETF_URL['VTI'])}, {link('ITOT', ETF_URL['ITOT'])}"),
+         "Direct ETF;" f"{link('VTI', ETF_URL['VTI'])} or 
+         common proxies: {link('VTI', ETF_URL['VTI'])}, {link('ITOT', ETF_URL['ITOT'])}"),
         ("Gold (via GLD/IAU)",
          "Exposure to the price of gold bullion. Often used for diversification and as a potential inflation hedge.",
-         f"{link('GLD', ETF_URL['GLD'])} (alt: {link('IAU', ETF_URL['IAU'])})"),
+         f"{link('GLD', ETF_URL['GLD'])} (alt: {link('IAU', ETF_URL['IAU'])}) or purchase physcial gold but premiums may apply on small denominations"),
         ("Silver (via SLV/SIVR)",
          "Exposure to silver bullion prices. Tends to be more volatile than gold and more sensitive to industrial demand.",
-         f"{link('SLV', ETF_URL['SLV'])} (alt: {link('SIVR', ETF_URL['SIVR'])})"),
+         f"{link('SLV', ETF_URL['SLV'])} (alt: {link('SIVR', ETF_URL['SIVR'])}) or purchase physcial silver but premiums may apply on small denominations"),
         ("Bitcoin",
          "Original cryptocurrency; highly volatile and speculative. Behaves differently from traditional assets.",
-         "Spot BTC ETFs (e.g., IBIT, FBTC) — availability varies by country/broker."),
+         "Spot BTC or ETFs such as" f"{link('FBTC', ETF_URL['FBTC'])}, {link('IBIT', ETF_URL['IBIT'])} — availability varies by country/broker."),
         ("Ethereum",
          "Smart-contract platform (2nd-largest crypto). Supports decentralized apps; also highly volatile and speculative.",
-         "Spot ETH ETFs (e.g., ETHA, EETH) — availability varies by country/broker."),
+         "Spot ETH or ETFs such as" f"{link('ETHA', ETF_URL['ETHA'])}, {link('FETH', ETF_URL['FETH'])}, {link('EETH', ETF_URL['EETH'])} — availability varies by country/broker."),
     ]
     guide_df = pd.DataFrame(guide_rows, columns=["Asset/Index", "What it tracks & what it is", "Where to invest (examples)"])
 
@@ -1502,6 +1511,7 @@ with tabs[3]:
 
     st.markdown(f"<div class='q-table-wrap'>{_style_guide_table(guide_df)}</div>", unsafe_allow_html=True)
     st.caption("*ETF availability depends on your country/broker. Educational only, not a recommendation.*")
+
 
 
 
